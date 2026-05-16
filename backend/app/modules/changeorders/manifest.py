@@ -9,7 +9,7 @@ manifest = ModuleManifest(
     description="Track scope changes, cost impacts, and approval workflows",
     author="OpenEstimate Core Team",
     category="core",
-    depends=["oe_projects", "oe_boq"],
+    depends=["oe_projects"],
     auto_install=True,
     enabled=True,
 )
