@@ -1285,7 +1285,6 @@ def create_app() -> FastAPI:
             from app.modules.reporting import models as _reporting_models  # noqa: F401
             from app.modules.requirements import models as _requirements_models  # noqa: F401
             from app.modules.rfi import models as _rfi_models  # noqa: F401
-            from app.modules.rfq_bidding import models as _rfq_bidding_models  # noqa: F401
             from app.modules.risk import models as _risk_models  # noqa: F401
             from app.modules.safety import models as _safety_models  # noqa: F401
             from app.modules.schedule import models as _sched_models  # noqa: F401

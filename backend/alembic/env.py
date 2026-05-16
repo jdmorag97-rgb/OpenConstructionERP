@@ -50,7 +50,6 @@ from app.modules.punchlist import models as _punchlist  # noqa: F401
 from app.modules.reporting import models as _reporting  # noqa: F401
 from app.modules.requirements import models as _requirements  # noqa: F401
 from app.modules.rfi import models as _rfi  # noqa: F401
-from app.modules.rfq_bidding import models as _rfq_bidding  # noqa: F401
 from app.modules.risk import models as _risk  # noqa: F401
 from app.modules.safety import models as _safety  # noqa: F401
 from app.modules.schedule import models as _sched  # noqa: F401
