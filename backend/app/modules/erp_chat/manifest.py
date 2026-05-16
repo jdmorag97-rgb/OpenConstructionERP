@@ -11,5 +11,5 @@ manifest = ModuleManifest(
     category="core",
     depends=["oe_ai", "oe_projects"],
     auto_install=True,
-    enabled=True,
+    enabled=False,
 )

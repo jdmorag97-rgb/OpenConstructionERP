@@ -21,5 +21,5 @@ manifest = ModuleManifest(
     category="core",
     depends=["oe_users"],
     auto_install=True,
-    enabled=True,
+    enabled=False,
 )
