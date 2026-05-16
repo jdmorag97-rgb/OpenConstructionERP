@@ -629,7 +629,7 @@ def cmd_init_db(args: argparse.Namespace) -> None:
         "ai", "assemblies", "bim_hub", "boq", "catalog", "cde",
         "changeorders", "collaboration", "contacts", "correspondence",
         "costmodel", "costs", "documents", "enterprise_workflows",
-        "erp_chat", "fieldreports", "finance", "full_evm",
+        "erp_chat", "fieldreports", "finance",
         "i18n_foundation", "inspections", "integrations", "markups",
         "meetings", "ncr", "notifications", "procurement", "projects",
         "punchlist", "reporting", "requirements", "rfi", "rfq_bidding",

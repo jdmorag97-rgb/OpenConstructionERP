@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(Get-ChildItem \"c:\\\\Users\\\\jesus\\\\Proyectos\\\\estruflow-erp\\\\backend\\\\app\\\\modules\\\\\" -Directory | Select-Object -ExpandProperty Name | Sort-Object)",
+      "Bash(python -m pytest tests/test_module_loader.py -x)",
+      "Bash(python -c \"from app.core.module_loader import module_loader; module_loader.discover\\(\\); print\\('OK'\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(python -m venv .venv)",
+      "Bash(c:/Users/jesus/Proyectos/estruflow-erp/backend/.venv/Scripts/python.exe -m pip install --upgrade pip)",
+      "Bash(.venv/Scripts/pip.exe install *)",
+      "Bash(Remove-Item -Recurse -Force .venv -ErrorAction SilentlyContinue)",
+      "PowerShell(& \"c:\\\\Users\\\\jesus\\\\Proyectos\\\\estruflow-erp\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\" --version)",
+      "PowerShell(& \"c:\\\\Users\\\\jesus\\\\Proyectos\\\\estruflow-erp\\\\backend\\\\.venv\\\\Scripts\\\\python.exe\" -m pip install --upgrade pip 2>&1)"
+    ]
+  }
+}
