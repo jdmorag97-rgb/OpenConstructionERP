@@ -9,7 +9,7 @@ manifest = ModuleManifest(
     description="KPI snapshots, report templates, and generated reports for projects and portfolios",
     author="OpenEstimate Core Team",
     category="core",
-    depends=["oe_users", "oe_projects", "oe_boq"],
+    depends=["oe_users", "oe_projects"],
     auto_install=True,
     enabled=True,
 )
