@@ -139,16 +139,7 @@ async def _get_ai_settings(session: AsyncSession) -> Any:
 
 async def _resolve_provider(session: AsyncSession) -> tuple[str, str] | None:
     """Resolve AI provider and key. Returns None if no LLM configured."""
-    try:
-        from app.modules.ai.ai_client import resolve_provider_and_key
-
-        settings = await _get_ai_settings(session)
-        if settings is None:
-            return None
-        provider, key = resolve_provider_and_key(settings)
-        return (provider, key)
-    except (ValueError, Exception):
-        return None
+    return None
 
 
 async def generate_recommendations(
@@ -174,8 +165,6 @@ async def generate_recommendations(
     provider_info = await _resolve_provider(session)
     if provider_info:
         try:
-            from app.modules.ai.ai_client import call_ai
-
             provider, api_key = provider_info
             system = _build_system_prompt(role, language, state.standard)
             context = _build_context_prompt(state, score)
@@ -220,8 +209,6 @@ async def explain_gap(
     provider_info = await _resolve_provider(session)
     if provider_info:
         try:
-            from app.modules.ai.ai_client import call_ai
-
             provider, api_key = provider_info
             system = (
                 f"You are a construction ERP expert explaining a project issue. "
@@ -325,8 +312,6 @@ async def answer_question(
     provider_info = await _resolve_provider(session)
     if provider_info:
         try:
-            from app.modules.ai.ai_client import call_ai
-
             provider, api_key = provider_info
             system = _build_system_prompt(role, language, state.standard)
             context = _build_context_prompt(state, score)

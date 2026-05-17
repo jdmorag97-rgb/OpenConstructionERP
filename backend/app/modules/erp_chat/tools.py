@@ -609,48 +609,12 @@ async def handle_get_schedule(
 async def handle_get_validation_results(
     session: AsyncSession, args: dict[str, Any], user_id: str
 ) -> dict[str, Any]:
-    """Get validation reports for a project."""
-    try:
-        from app.modules.validation.repository import ValidationReportRepository
-
-        try:
-            pid = _parse_uuid(args.get("project_id"), "project_id")
-            await _require_project_access(session, pid, user_id)
-        except ToolAuthError as _te:
-            return _auth_error(str(_te))
-        repo = ValidationReportRepository(session)
-        reports, total = await repo.list_for_project(pid, limit=10)
-        if not reports:
-            return {
-                "renderer": "validation_dashboard",
-                "data": {"reports": []},
-                "summary": "No validation reports found for this project",
-            }
-
-        report_list = []
-        for r in reports:
-            report_list.append({
-                "id": str(r.id),
-                "target_type": r.target_type,
-                "target_id": r.target_id,
-                "rule_set": r.rule_set,
-                "status": r.status,
-                "score": str(r.score) if r.score else None,
-                "total_rules": getattr(r, "total_rules", 0),
-                "passed_count": getattr(r, "passed_count", 0),
-                "warning_count": getattr(r, "warning_count", 0),
-                "error_count": getattr(r, "error_count", 0),
-                "created_at": str(r.created_at),
-            })
-
-        return {
-            "renderer": "validation_dashboard",
-            "data": {"reports": report_list, "total": total},
-            "summary": f"{total} validation report(s) found",
-        }
-    except Exception as exc:
-        logger.exception("handle_get_validation_results failed")
-        return {"renderer": "error", "data": {"error": str(exc)}, "summary": f"Error: {exc}"}
+    """Validation module removed — not available in Estruflow ERP."""
+    return {
+        "renderer": "error",
+        "data": {"error": "Validation module not available"},
+        "summary": "Validation module removed (pre-Ola 2)",
+    }
 
 
 async def handle_get_risk_register(
@@ -856,49 +820,12 @@ async def handle_compare_projects(
 async def handle_run_validation(
     session: AsyncSession, args: dict[str, Any], user_id: str
 ) -> dict[str, Any]:
-    """Trigger validation for a project and return results."""
-    try:
-        from app.modules.validation.repository import ValidationReportRepository
-
-        try:
-            pid = _parse_uuid(args.get("project_id"), "project_id")
-            await _require_project_access(session, pid, user_id)
-        except ToolAuthError as _te:
-            return _auth_error(str(_te))
-        repo = ValidationReportRepository(session)
-        # Return the most recent validation reports
-        reports, total = await repo.list_for_project(pid, limit=5)
-
-        if not reports:
-            return {
-                "renderer": "validation_dashboard",
-                "data": {"reports": []},
-                "summary": "No validation reports available. Run validation from the Validation module first.",
-            }
-
-        report_list = []
-        for r in reports:
-            report_list.append({
-                "id": str(r.id),
-                "target_type": r.target_type,
-                "rule_set": r.rule_set,
-                "status": r.status,
-                "score": str(r.score) if r.score else None,
-                "total_rules": getattr(r, "total_rules", 0),
-                "passed_count": getattr(r, "passed_count", 0),
-                "warning_count": getattr(r, "warning_count", 0),
-                "error_count": getattr(r, "error_count", 0),
-                "created_at": str(r.created_at),
-            })
-
-        return {
-            "renderer": "validation_dashboard",
-            "data": {"reports": report_list, "total": total},
-            "summary": f"Latest validation: {reports[0].status} (score: {reports[0].score})",
-        }
-    except Exception as exc:
-        logger.exception("handle_run_validation failed")
-        return {"renderer": "error", "data": {"error": str(exc)}, "summary": f"Error: {exc}"}
+    """Validation module removed — not available in Estruflow ERP."""
+    return {
+        "renderer": "error",
+        "data": {"error": "Validation module not available"},
+        "summary": "Validation module removed (pre-Ola 2)",
+    }
 
 
 async def handle_create_boq_item(

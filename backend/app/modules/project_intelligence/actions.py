@@ -245,53 +245,10 @@ async def _run_validation(
     returns its id + pass/warning/error counts. Never falls back to a
     simple redirect — if the service fails, we surface the error.
     """
-    try:
-        boq = await _find_project_boq(session, project_id)
-        if boq is None:
-            return ActionResult(
-                success=False,
-                message="No BOQ found for this project. Create a BOQ first.",
-            )
-
-        from app.modules.validation.service import ValidationModuleService
-
-        svc = ValidationModuleService(session)
-        report = await svc.run_validation(
-            project_id=_to_uuid(project_id),
-            boq_id=boq.id,
-            rule_sets=["din276", "boq_quality"],
-            user_id=None,
-        )
-        await session.commit()
-
-        error_count = int(report.get("error_count", 0))
-        warning_count = int(report.get("warning_count", 0))
-        passed_count = int(report.get("passed_count", 0))
-        status_str = report.get("status", "done")
-        report_id = report.get("report_id")
-
-        return ActionResult(
-            success=True,
-            message=(
-                f"Validation completed ({status_str}): "
-                f"{passed_count} passed, {warning_count} warnings, {error_count} errors"
-            ),
-            redirect_url="/validation",
-            data={
-                "report_id": report_id,
-                "status": status_str,
-                "error_count": error_count,
-                "warning_count": warning_count,
-                "passed_count": passed_count,
-                "boq_id": str(boq.id),
-            },
-        )
-    except Exception as exc:
-        logger.exception("_run_validation failed for project %s", project_id)
-        return ActionResult(
-            success=False,
-            message=f"Validation failed: {str(exc)[:200]}",
-        )
+    return ActionResult(
+        success=False,
+        message="Validation module not available in Estruflow ERP (removed pre-Ola 2).",
+    )
 
 
 async def _match_cwicr_prices(

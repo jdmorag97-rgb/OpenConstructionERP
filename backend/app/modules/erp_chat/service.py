@@ -160,14 +160,7 @@ class ERPChatService:
         Returns:
             Tuple of (provider, api_key, model_or_none).
         """
-        from app.modules.ai.ai_client import resolve_provider_and_key
-        from app.modules.ai.repository import AISettingsRepository
-
-        repo = AISettingsRepository(self.session)
-        settings = await repo.get_by_user_id(uuid.UUID(user_id))
-        provider, api_key = resolve_provider_and_key(settings)
-        model = getattr(settings, "preferred_model", None) if settings else None
-        return provider, api_key, model
+        raise NotImplementedError("Wire to estruflow-ai-parser HTTP in v1.1")
 
     # ── Main streaming entry point ───────────────────────────────────────
 
@@ -369,9 +362,7 @@ class ERPChatService:
         preferred_model: str | None,
     ) -> tuple[dict[str, Any], int]:
         """Call Anthropic Messages API with tools."""
-        from app.modules.ai.ai_client import ANTHROPIC_MODEL
-
-        model = ANTHROPIC_MODEL
+        model = "claude-sonnet-4-20250514"
         if preferred_model and "claude" in preferred_model:
             # Use preferred model if it looks like a Claude model
             pass  # Keep default — the preferred_model field is a preference hint
@@ -408,9 +399,7 @@ class ERPChatService:
         preferred_model: str | None,
     ) -> tuple[dict[str, Any], int]:
         """Call OpenAI ChatCompletions API with tools."""
-        from app.modules.ai.ai_client import OPENAI_MODEL
-
-        model = OPENAI_MODEL
+        model = "gpt-4o"
         if preferred_model and ("gpt" in preferred_model or "o1" in preferred_model):
             pass  # Keep default
 
@@ -455,20 +444,7 @@ class ERPChatService:
         self, provider: str, api_key: str, message: str
     ) -> AsyncGenerator[str, None]:
         """Call a provider without tool support — yield SSE text events."""
-        from app.modules.ai.ai_client import call_ai
-
-        try:
-            text, tokens = await call_ai(
-                provider=provider,
-                api_key=api_key,
-                system=SYSTEM_PROMPT,
-                prompt=message,
-            )
-            chunk_size = 50
-            for i in range(0, len(text), chunk_size):
-                yield _sse("text", {"content": text[i : i + chunk_size]})
-        except Exception as exc:
-            yield _sse("error", {"message": f"AI error ({provider}): {exc}"})
+        yield _sse("error", {"message": "AI module not available — wire to estruflow-ai-parser in v1.1"})
 
     # ── Response parsing ─────────────────────────────────────────────────
 
