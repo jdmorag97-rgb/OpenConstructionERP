@@ -86,12 +86,14 @@ data/cwicr/cache/
 frontend/debug-bim/
 
 # Claude Code / MCP — keep instruction files (.claude/*.md) but
-# ignore session cache, temp data, and MCP artifacts
+# ignore session cache, temp data, IDE settings, and MCP artifacts
 .claude/tmp/
 .claude/cache/
 .claude/projects/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
+.claude/settings.json
+.claude/settings.local.json
 *.claude-session
 .mcp.json
 .playwright-mcp/
