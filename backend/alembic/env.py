@@ -19,10 +19,8 @@ _MIGRATION_ENV_TAG: str = "37efb59ad47d364e"
 # Core models (not in modules/)
 from app.core import audit as _audit_core  # noqa: F401
 from app.database import Base
-from app.modules.assemblies import models as _asm  # noqa: F401
 from app.modules.bim_hub import models as _bim_hub  # noqa: F401
 from app.modules.boq import models as _boq  # noqa: F401
-from app.modules.catalog import models as _catalog  # noqa: F401
 from app.modules.cde import models as _cde  # noqa: F401
 from app.modules.changeorders import models as _changeorders  # noqa: F401
 from app.modules.collaboration import models as _collaboration  # noqa: F401
@@ -52,7 +50,6 @@ from app.modules.risk import models as _risk  # noqa: F401
 from app.modules.safety import models as _safety  # noqa: F401
 from app.modules.schedule import models as _sched  # noqa: F401
 from app.modules.submittals import models as _submittals  # noqa: F401
-from app.modules.takeoff import models as _takeoff  # noqa: F401
 from app.modules.tasks import models as _tasks  # noqa: F401
 from app.modules.teams import models as _teams  # noqa: F401
 from app.modules.transmittals import models as _transmittals  # noqa: F401

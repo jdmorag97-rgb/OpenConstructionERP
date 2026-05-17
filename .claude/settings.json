@@ -10,7 +10,8 @@
       "Bash(xargs grep -E \"from app\\\\.modules\\\\.\\(ai|validation|costmodel|tendering|assemblies|catalog|takeoff\\)\")",
       "Bash(xargs grep -E \"\\(import app\\\\.modules\\\\.\\(ai|validation|costmodel|tendering|assemblies|catalog|takeoff\\)|\\\\\"oe_\\(ai|validation|costmodel|tendering|assemblies|catalog|takeoff\\)\\\\\"|'oe_\\(ai|validation|costmodel|tendering|assemblies|catalog|takeoff\\)'\\)\")",
       "Bash(awk 'NR>=220 && NR<=400 && /validation/' /c/Users/jesus/Proyectos/estruflow-erp/backend/app/main.py)",
-      "Bash(grep -E \"^ai$|^validation$|^costmodel$|^tendering$\")"
+      "Bash(grep -E \"^ai$|^validation$|^costmodel$|^tendering$\")",
+      "Bash(grep -E \"^assemblies$|^catalog$|^takeoff$\")"
     ]
   }
 }
