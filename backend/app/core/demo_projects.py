@@ -23,7 +23,6 @@ from app.modules.boq.models import BOQ, BOQMarkup, Position
 from app.modules.changeorders.models import ChangeOrder, ChangeOrderItem
 from app.modules.contacts.models import Contact
 from app.modules.correspondence.models import Correspondence
-from app.modules.costmodel.models import BudgetLine, CashFlow, CostSnapshot
 from app.modules.documents.models import Document
 from app.modules.fieldreports.models import FieldReport
 from app.modules.finance.models import Invoice, InvoiceLineItem, ProjectBudget
@@ -38,7 +37,6 @@ from app.modules.safety.models import SafetyIncident, SafetyObservation
 from app.modules.schedule.models import Activity, Schedule
 from app.modules.submittals.models import Submittal
 from app.modules.tasks.models import Task
-from app.modules.tendering.models import TenderBid, TenderPackage
 from app.modules.users.models import User
 
 logger = logging.getLogger(__name__)
@@ -159,9 +157,6 @@ def _sum_positions(positions: list[Position]) -> float:
 
 SectionDef = tuple[str, str, dict, list[tuple[str, str, str, float, float, dict]]]
 
-# (package_name, description, status, companies_list)
-TenderPackageDef = tuple[str, str, str, list[tuple[str, str, float]]]
-
 # (name, start_date_str, end_date_str)  — explicit schedule activities
 ScheduleActivityDef = tuple[str, str, str]
 
@@ -197,19 +192,9 @@ class DemoTemplate:
     sections: list[SectionDef]
     markups: list[tuple[str, float, str, str]]  # (name, percentage, category, apply_to)
     total_months: int
-    tender_name: str
-    tender_companies: list[tuple[str, str, float]]  # (company, email, factor)
     project_metadata: dict = field(default_factory=dict)
-    # Optional: multiple tender packages. When set, overrides tender_name/tender_companies.
-    tender_packages: list[TenderPackageDef] = field(default_factory=list)
     # Optional: explicit schedule activities. When set, overrides auto-generation from sections.
     schedule_activities: list[ScheduleActivityDef] = field(default_factory=list)
-    # Optional: budget/5D overrides
-    budget_boq_name: str = ""
-    planned_budget: float = 0.0
-    actual_spend_ratio: float = 0.0
-    spi_override: float = 0.0
-    cpi_override: float = 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -633,12 +618,6 @@ _BERLIN = DemoTemplate(
         ("Mehrwertsteuer (MwSt.)", 19.0, "tax", "cumulative"),
     ],
     total_months=22,
-    tender_name="Rohbau (Structural)",
-    tender_companies=[
-        ("Hochtief AG", "tender@hochtief.de", 0.98),
-        ("Strabag SE", "bids@strabag.com", 1.05),
-        ("Zueblin GmbH", "vergabe@zueblin.de", 1.02),
-    ],
     project_metadata={
         "address": "Chausseestrasse 45, 10115 Berlin",
         "client": "Berliner Wohnungsbaugesellschaft mbH",
@@ -649,67 +628,6 @@ _BERLIN = DemoTemplate(
         "parking_spaces": 60,
         "energy_standard": "KfW 55",
     },
-    tender_packages=[
-        (
-            "Rohbau (Structural)",
-            "Erdarbeiten, Gruendung, Stahlbetonrohbau, Mauerwerk",
-            "evaluating",
-            [
-                ("Hochtief AG", "tender@hochtief.de", 0.98),
-                ("Strabag SE", "bids@strabag.com", 1.05),
-                ("Zueblin GmbH", "vergabe@zueblin.de", 1.02),
-            ],
-        ),
-        (
-            "Fassade/Dach (Envelope)",
-            "WDVS, Putzarbeiten, Flachdachabdichtung, Begruenungen",
-            "evaluating",
-            [
-                ("Sto SE & Co. KGaA", "vergabe@sto.de", 0.97),
-                ("Caparol / DAW SE", "ausschreibung@caparol.de", 1.04),
-                ("Brillux GmbH", "tender@brillux.de", 1.01),
-            ],
-        ),
-        (
-            "HLS Heizung/Lueftung/Sanitaer (MEP Mechanical)",
-            "Waermepumpe, Fussbodenheizung, Lueftung, Sanitaerinstallation",
-            "evaluating",
-            [
-                ("Imtech Deutschland", "vergabe@imtech.de", 0.99),
-                ("Caverion GmbH", "angebote@caverion.de", 1.06),
-                ("Goldbeck Gebaudetechnik", "hls@goldbeck.de", 1.03),
-            ],
-        ),
-        (
-            "Elektro (MEP Electrical)",
-            "Stark- und Schwachstrominstallation, Beleuchtung, E-Mobilitaet",
-            "evaluating",
-            [
-                ("Cegelec / VINCI Energies", "angebote@cegelec.de", 0.97),
-                ("Spie GmbH", "tender@spie.de", 1.05),
-                ("Wisag Elektrotechnik", "vergabe@wisag.de", 1.02),
-            ],
-        ),
-        (
-            "Innenausbau (Interior Finishes)",
-            "Trockenbau, Estrich, Fliesen, Parkett, Malerarbeiten, Tueren",
-            "evaluating",
-            [
-                ("Lindner Group", "vergabe@lindner-group.com", 0.96),
-                ("Brochier Ausbau", "angebote@brochier.de", 1.04),
-                ("Wolff & Mueller Ausbau", "ausbau@wolff-mueller.de", 1.01),
-            ],
-        ),
-        (
-            "Aussenanlagen (External Works)",
-            "Pflasterung, Bepflanzung, Spielplatz, Zaun, Beleuchtung",
-            "evaluating",
-            [
-                ("Galabau Meier GmbH", "angebote@galabau-meier.de", 0.99),
-                ("GreenTech Landschaftsbau", "vergabe@greentech-gala.de", 1.06),
-            ],
-        ),
-    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -861,12 +779,6 @@ _LONDON = DemoTemplate(
         ("VAT", 20.0, "tax", "cumulative"),
     ],
     total_months=24,
-    tender_name="Shell & Core Package",
-    tender_companies=[
-        ("Laing O'Rourke", "tenders@lor.com", 0.96),
-        ("Balfour Beatty", "bids@bb.com", 1.08),
-        ("Mace Group", "proc@mace.com", 1.01),
-    ],
     project_metadata={
         "address": "Canary Wharf, London E14",
         "client": "Canary Wharf Group plc",
@@ -899,7 +811,6 @@ _US_MEDICAL = DemoTemplate(
     project_metadata={"building_type": "hospital", "area_m2": 25000, "stories": 5},
     boq_name="Downtown Medical Center \u2014 Full Estimate",
     boq_description="Detailed cost estimate for 200-bed medical center, MasterFormat divisions",
-    budget_boq_name="Downtown Medical Center \u2014 Budget Estimate",
     boq_metadata={
         "standard": "CSI MasterFormat 2018",
         "phase": "Detailed Estimate",
@@ -1049,34 +960,6 @@ _US_MEDICAL = DemoTemplate(
         ("Performance Bond", 1.5, "insurance", "cumulative"),
     ],
     total_months=22,
-    tender_name="Structural Steel Package",
-    tender_companies=[
-        ("Turner Construction", "bids@turnerconstruction.com", 0.97),
-        ("Skanska USA", "tenders@skanska.us", 1.04),
-        ("Whiting-Turner", "procurement@whiting-turner.com", 1.01),
-    ],
-    tender_packages=[
-        (
-            "Structural Steel Package",
-            "Structural steel frame, metal deck, connections, fireproofing",
-            "evaluating",
-            [
-                ("Turner Construction", "bids@turnerconstruction.com", 0.97),
-                ("Skanska USA", "tenders@skanska.us", 1.04),
-                ("Whiting-Turner", "procurement@whiting-turner.com", 1.01),
-            ],
-        ),
-        (
-            "MEP Services Package",
-            "Mechanical, electrical, plumbing, fire protection, medical gas",
-            "evaluating",
-            [
-                ("JE Dunn Construction", "bids@jedunn.com", 0.98),
-                ("Hensel Phelps", "tenders@henselphelps.com", 1.05),
-                ("Robins & Morton", "procurement@robinsmorton.com", 1.02),
-            ],
-        ),
-    ],
     schedule_activities=[
         ("Site Preparation", "2025-06-01", "2025-08-15"),
         ("Foundation & Slab on Grade", "2025-08-01", "2025-11-30"),
@@ -1094,10 +977,6 @@ _US_MEDICAL = DemoTemplate(
         ("Commissioning & Testing", "2026-11-01", "2027-02-28"),
         ("Substantial Completion", "2027-01-15", "2027-03-31"),
     ],
-    planned_budget=25_000_000,
-    actual_spend_ratio=0.42,
-    spi_override=1.02,
-    cpi_override=0.95,
 )
 
 # ---------------------------------------------------------------------------
@@ -1211,12 +1090,6 @@ _DUBAI = DemoTemplate(
         ("Contingency", 5.0, "contingency", "cumulative"),
     ],
     total_months=12,
-    tender_name="Main Construction Package",
-    tender_companies=[
-        ("Alec Engineering", "bids@alec.ae", 0.97),
-        ("Arabtec Construction", "tender@arabtec.com", 1.06),
-        ("Al Habtoor Leighton", "procurement@hlg.ae", 1.02),
-    ],
     project_metadata={
         "address": "Jebel Ali Free Zone, Dubai, UAE",
         "client": "DP World Logistics",
@@ -1833,12 +1706,6 @@ _PARIS = DemoTemplate(
         ("TVA", 20.0, "tax", "cumulative"),
     ],
     total_months=18,
-    tender_name="Lot Gros Oeuvre (Structural/Foundations)",
-    tender_companies=[
-        ("Bouygues Batiment", "appels@bouygues.fr", 0.98),
-        ("Eiffage Construction", "marches@eiffage.fr", 1.05),
-        ("Vinci Construction", "offres@vinci-construction.fr", 1.01),
-    ],
     project_metadata={
         "address": "Rue de Belleville 120, 75020 Paris",
         "client": "Mairie de Paris — DASCO",
@@ -1850,58 +1717,6 @@ _PARIS = DemoTemplate(
         "energy_standard": "RE 2020 (passif)",
         "structure_type": "bois-beton",
     },
-    tender_packages=[
-        (
-            "Gros Oeuvre (Structural/Foundations)",
-            "Terrassement, fondations, beton arme, maconnerie",
-            "evaluating",
-            [
-                ("Bouygues Batiment", "appels@bouygues.fr", 0.98),
-                ("Eiffage Construction", "marches@eiffage.fr", 1.05),
-                ("Vinci Construction", "offres@vinci-construction.fr", 1.01),
-            ],
-        ),
-        (
-            "Charpente Bois / Couverture (Timber Structure/Roofing)",
-            "Structure CLT, lamelle-colle, toiture, etancheite, photovoltaique",
-            "evaluating",
-            [
-                ("Mathis (Groupe Dassault)", "appels@mathis.eu", 0.97),
-                ("Piveteaubois", "marches@piveteaubois.com", 1.04),
-                ("Rubner Holzbau", "offres@rubner.com", 1.02),
-            ],
-        ),
-        (
-            "CVC Plomberie (HVAC/Plumbing)",
-            "Geothermie, plancher chauffant, ventilation, plomberie sanitaire",
-            "evaluating",
-            [
-                ("Dalkia (Groupe EDF)", "appels@dalkia.fr", 0.99),
-                ("Engie Solutions", "marches@engie.fr", 1.06),
-                ("Idex Energies", "offres@idex.fr", 1.03),
-            ],
-        ),
-        (
-            "Electricite (Electrical)",
-            "Courant fort, courant faible, SSI, photovoltaique raccordement",
-            "evaluating",
-            [
-                ("Cegelec (VINCI Energies)", "appels@cegelec.fr", 0.97),
-                ("Spie France", "marches@spie.fr", 1.05),
-                ("Eiffage Energie Systemes", "offres@eiffage-energie.fr", 1.02),
-            ],
-        ),
-        (
-            "Second Oeuvre / Finitions (Interior Finishes + External)",
-            "Cloisons, revetements sols/murs, menuiseries interieures, amenagements exterieurs",
-            "evaluating",
-            [
-                ("Malet (Groupe Fayat)", "appels@malet.fr", 0.98),
-                ("Bateg (Groupe Vinci)", "marches@bateg.fr", 1.04),
-                ("Sogea Ile-de-France", "offres@sogea-idf.fr", 1.01),
-            ],
-        ),
-    ],
 )
 
 
@@ -6881,7 +6696,7 @@ async def install_demo_project(
 
     # ── 4b. Second BOQ — Budget Estimate (section-level lump sums) ───
     budget_boq_id = _id()
-    budget_boq_name = template.budget_boq_name or f"{template.boq_name} \u2014 Budget"
+    budget_boq_name = f"{template.boq_name} \u2014 Budget"
     budget_boq = BOQ(
         id=budget_boq_id,
         project_id=project.id,
@@ -7010,150 +6825,9 @@ async def install_demo_project(
             prev_id = act.id
             current_start = end_date
 
-    # ── 6. Budget Lines (5D) ──────────────────────────────────────────
-    for i, sec in enumerate(sections_list):
-        sec_items = [p for p in items_list if str(p.parent_id) == str(sec.id)]
-        planned = sum(float(p.total or 0) for p in sec_items)
-        spend = max(0, min(1, (len(sections_list) - i) / max(len(sections_list), 1) * 0.8))
-        actual = round(planned * spend * (0.95 + 0.1 * (i % 3)), 2)
-        committed = round(planned * min(1, spend + 0.15), 2)
-        forecast = round(planned * (1.02 + 0.01 * (i % 4)), 2)
-
-        bl = BudgetLine(
-            id=_id(),
-            project_id=project.id,
-            category=sec.description or f"Category {i + 1}",
-            description=f"From BOQ section {sec.ordinal}",
-            planned_amount=str(round(planned, 2)),
-            committed_amount=str(round(committed, 2)),
-            actual_amount=str(round(actual, 2)),
-            forecast_amount=str(round(forecast, 2)),
-            currency=template.currency,
-            metadata_={},
-        )
-        session.add(bl)
-
-    # ── 7. Cash Flow (5D) ─────────────────────────────────────────────
-    cum_p, cum_a = 0.0, 0.0
-    for m in range(total_months):
-        mid = total_months / 2
-        w = 1 - abs(m - mid) / mid
-        monthly = grand_total * w / (total_months * 0.55)
-        cum_p += monthly
-        act_m = monthly * 0.92 if m < total_months * 0.6 else 0
-        cum_a += act_m
-        period = f"{2026 + (3 + m) // 12:04d}-{((3 + m) % 12) + 1:02d}"
-
-        cf = CashFlow(
-            id=_id(),
-            project_id=project.id,
-            period=period,
-            category="total",
-            planned_outflow=str(round(monthly, 2)),
-            actual_outflow=str(round(act_m, 2)),
-            planned_inflow="0",
-            actual_inflow="0",
-            cumulative_planned=str(round(cum_p, 2)),
-            cumulative_actual=str(round(cum_a, 2)),
-            metadata_={},
-        )
-        session.add(cf)
-
-    # ── 8. EVM Snapshot (5D) ──────────────────────────────────────────
-    ev = grand_total * 0.52
-    pv = grand_total * 0.58
-    ac = grand_total * 0.54
-    spi = round(ev / pv, 2) if pv else 1.0
-    cpi = round(ev / ac, 2) if ac else 1.0
-    eac = round(grand_total / cpi, 2) if cpi else grand_total
-    period_now = f"2026-{datetime.now(UTC).month:02d}"
-
-    snap = CostSnapshot(
-        id=_id(),
-        project_id=project.id,
-        period=period_now,
-        planned_cost=str(round(pv, 2)),
-        earned_value=str(round(ev, 2)),
-        actual_cost=str(round(ac, 2)),
-        forecast_eac=str(round(eac, 2)),
-        spi=str(spi),
-        cpi=str(cpi),
-        notes="Baseline snapshot",
-        metadata_={},
-    )
-    session.add(snap)
-
-    # ── 9. Tendering ──────────────────────────────────────────────────
-    if template.tender_packages:
-        # Multiple tender packages
-        n_pkgs = len(template.tender_packages)
-        for pkg_idx, (pkg_name, pkg_desc, pkg_status, pkg_companies) in enumerate(template.tender_packages):
-            pkg = TenderPackage(
-                id=_id(),
-                project_id=project.id,
-                boq_id=boq.id,
-                name=pkg_name,
-                description=pkg_desc,
-                status=pkg_status,
-                deadline=(start - timedelta(days=30 + pkg_idx * 7)).strftime("%Y-%m-%d"),
-                metadata_={"package_index": pkg_idx + 1, "total_packages": n_pkgs},
-            )
-            session.add(pkg)
-            await session.flush()
-
-            # Each package covers a proportional share of grand_total
-            pkg_share = grand_total / n_pkgs
-            for co, email, factor in pkg_companies:
-                total = round(pkg_share * factor, 2)
-                bid = TenderBid(
-                    id=_id(),
-                    package_id=pkg.id,
-                    company_name=co,
-                    contact_email=email,
-                    total_amount=str(total),
-                    currency=template.currency,
-                    submitted_at=datetime.now(UTC).isoformat(),
-                    status="submitted",
-                    notes=f"Tender — {co} — {pkg_name}",
-                    line_items=[],
-                    metadata_={},
-                )
-                session.add(bid)
-    else:
-        # Single tender package (legacy / default)
-        pkg = TenderPackage(
-            id=_id(),
-            project_id=project.id,
-            boq_id=boq.id,
-            name=template.tender_name,
-            description=f"Main tender package for {template.project_name}",
-            status="evaluating",
-            deadline=(start - timedelta(days=30)).strftime("%Y-%m-%d"),
-            metadata_={},
-        )
-        session.add(pkg)
-        await session.flush()
-
-        for co, email, factor in template.tender_companies:
-            total = round(grand_total * factor, 2)
-            bid = TenderBid(
-                id=_id(),
-                package_id=pkg.id,
-                company_name=co,
-                contact_email=email,
-                total_amount=str(total),
-                currency=template.currency,
-                submitted_at=datetime.now(UTC).isoformat(),
-                status="submitted",
-                notes=f"Tender — {co}",
-                line_items=[],
-                metadata_={},
-            )
-            session.add(bid)
-
     await session.flush()
 
-    # ── 10. Risk Register ─────────────────────────────────────────────
+    # ── 6. Risk Register ──────────────────────────────────────────────
     _DEMO_RISKS: dict[str, list[RiskDef]] = {
         "residential-berlin": [
             (
