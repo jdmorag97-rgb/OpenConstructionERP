@@ -70,9 +70,6 @@ _BACKUP_TABLE_DEFS: list[tuple[str, str, str, str]] = [
     ("markups", "oe_boq_markup", "app.modules.boq.models", "BOQMarkup"),
     ("schedules", "oe_schedule_schedule", "app.modules.schedule.models", "Schedule"),
     ("activities", "oe_schedule_activity", "app.modules.schedule.models", "Activity"),
-    ("budget_lines", "oe_costmodel_budget_line", "app.modules.costmodel.models", "BudgetLine"),
-    ("cash_flows", "oe_costmodel_cash_flow", "app.modules.costmodel.models", "CashFlow"),
-    ("cost_snapshots", "oe_costmodel_snapshot", "app.modules.costmodel.models", "CostSnapshot"),
     ("risks", "oe_risk_register", "app.modules.risk.models", "RiskItem"),
     ("change_orders", "oe_changeorders_order", "app.modules.changeorders.models", "ChangeOrder"),
     (
@@ -82,16 +79,6 @@ _BACKUP_TABLE_DEFS: list[tuple[str, str, str, str]] = [
         "ChangeOrderItem",
     ),
     ("documents", "oe_documents_document", "app.modules.documents.models", "Document"),
-    ("assemblies", "oe_assemblies_assembly", "app.modules.assemblies.models", "Assembly"),
-    (
-        "assembly_components",
-        "oe_assemblies_component",
-        "app.modules.assemblies.models",
-        "Component",
-    ),
-    ("tender_packages", "oe_tendering_package", "app.modules.tendering.models", "TenderPackage"),
-    ("tender_bids", "oe_tendering_bid", "app.modules.tendering.models", "TenderBid"),
-    ("ai_settings", "oe_ai_settings", "app.modules.ai.models", "AISettings"),
 ]
 
 
