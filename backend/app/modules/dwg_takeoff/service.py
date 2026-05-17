@@ -335,12 +335,7 @@ class DwgTakeoffService:
 
     async def _handle_dwg(self, drawing_id: uuid.UUID, file_path: str) -> None:
         """Process DWG via DDC DwgExporter → Excel → parse entities."""
-        try:
-            from app.modules.boq.cad_import import find_converter
-
-            converter = find_converter("dwg")
-        except ImportError:
-            converter = None
+        converter = None  # cad_import removed (pre-Ola 3)
 
         if converter is None:
             await self.drawing_repo.update_fields(
@@ -808,12 +803,7 @@ class DwgTakeoffService:
         binary needed for the ``.dwg`` path. DXF files already work without
         it. Returns a dict matching :class:`DwgOfflineReadinessResponse`.
         """
-        try:
-            from app.modules.boq.cad_import import find_converter
-
-            converter = find_converter("dwg")
-        except ImportError:
-            converter = None
+        converter = None  # cad_import removed (pre-Ola 3)
 
         if converter is None:
             return {

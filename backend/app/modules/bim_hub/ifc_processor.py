@@ -87,10 +87,10 @@ def _try_cad2data(ifc_path: Path, output_dir: Path, *, conversion_depth: str = "
     #
     # CRITICAL: DDC needs cwd=converter.parent (Qt6Core.dll lives there),
     # so all paths must be absolute or the converter reports "File does not exist".
-    try:
-        from app.modules.boq.cad_import import find_converter, parse_cad_excel
-
-        converter = find_converter(ext)
+    # DDC Community Converter via cad_import removed (pre-Ola 3).
+    # Falling through to cad2data binary path below.
+    if False:  # noqa: SIM210 — dead block preserves indented body below
+        converter = None
         if converter:
             import subprocess
             logger.info("Using DDC Community Converter: %s", converter)
@@ -201,11 +201,6 @@ def _try_cad2data(ifc_path: Path, output_dir: Path, *, conversion_depth: str = "
                 output_dir,
                 real_dae_path=real_dae_path,
             )
-    except ImportError:
-        logger.debug("cad_import module not available")
-    except Exception as e:
-        logger.warning("DDC Community Converter error: %s", e, exc_info=True)
-
     # --- Method 2: cad2data binary on PATH ---
     import csv
     import shutil

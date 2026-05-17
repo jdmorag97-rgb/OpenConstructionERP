@@ -1133,13 +1133,10 @@ async def _generate_pdf_in_background(
     from app.database import async_session_factory
 
     converter_ext = ext.lstrip(".").lower()
-    try:
-        from app.modules.boq.cad_import import find_converter
-    except ImportError:
-        logger.warning("PDF generation skipped — cad_import not available")
-        return
+    logger.warning("PDF generation skipped — cad_import removed (pre-Ola 3)")
+    return
 
-    converter = find_converter(converter_ext)
+    converter = None  # unreachable; kept for type checker
     if not converter:
         logger.info(
             "PDF generation skipped — %s converter not installed",
@@ -1287,32 +1284,17 @@ async def upload_cad_file(
     # dispatch on the response body without falling into a generic error
     # path — see BIMCadUploadResponse in frontend/src/features/bim/api.ts.
     if ext in _NEEDS_CONVERTER_EXTS:
-        from app.modules.boq.cad_import import find_converter
-
-        if find_converter(ext.lstrip(".")) is None:
-            logger.info(
-                "Refusing %s upload — %s converter not installed",
-                ext, ext.lstrip(".").upper(),
-            )
-            return {
-                "status": "converter_required",
-                "format": ext.lstrip("."),
-                "converter_id": ext.lstrip("."),
-                "message": (
-                    f"{ext.upper().lstrip('.')} files require the "
-                    f"{ext.upper().lstrip('.')} converter, which is not "
-                    f"installed on this server. Install it from the BIM "
-                    f"converter banner and re-upload."
-                ),
-                "install_endpoint": (
-                    f"/api/v1/takeoff/converters/{ext.lstrip('.')}/install/"
-                ),
-                "model_id": None,
-                "name": None,
-                "file_size": 0,
-                "element_count": 0,
-                "error_message": None,
-            }
+        logger.info("CAD converter support removed (cad_import pre-Ola 3) — refusing %s upload", ext)
+        return {
+            "status": "converter_not_available",
+            "format": ext.lstrip("."),
+            "message": "CAD conversion has been removed from this build.",
+            "model_id": None,
+            "name": None,
+            "file_size": 0,
+            "element_count": 0,
+            "error_message": None,
+        }
 
     # Check Content-Length header before reading the whole file into memory
     if file.size and file.size > _CAD_MAX_SIZE:
@@ -2235,132 +2217,6 @@ async def export_cobie_xlsx(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# BOQ Links
-# ═══════════════════════════════════════════════════════════════════════════════
-
-
-async def _verify_boq_position_access(
-    service: "BIMHubService",
-    position_id: uuid.UUID,
-    user_id: str,
-) -> None:
-    """Resolve a BOQ position → its BOQ → project and verify the caller owns it.
-
-    `Position` has no direct `project_id` column — the project lives on the
-    parent `BOQ` row reached via `position.boq_id`.  We do a single-row
-    SELECT joining position → boq so this stays one round-trip.
-    """
-    # ``BOQ`` is the class name exposed by ``boq.models`` and it refers to
-    # the Bill-of-Quantities aggregate, not a module-level constant — the
-    # ``N811`` noqa below suppresses ruff's all-caps-is-a-constant heuristic.
-    from app.modules.boq.models import BOQ as BOQModel  # noqa: N811
-    from app.modules.boq.models import Position
-
-    stmt = (
-        select(BOQModel.project_id)
-        .join(Position, Position.boq_id == BOQModel.id)
-        .where(Position.id == position_id)
-    )
-    result = await service.session.execute(stmt)
-    project_id = result.scalar_one_or_none()
-    if project_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="BOQ position not found",
-        )
-    await _verify_project_access(service.session, project_id, user_id)
-
-
-@router.get("/links/", response_model=BOQElementLinkListResponse)
-async def list_links(
-    boq_position_id: uuid.UUID = Query(...),
-    user_id: CurrentUserId = None,  # type: ignore[assignment]
-    _perm: None = Depends(RequirePermission("bim.read")),
-    service: BIMHubService = Depends(_get_service),
-) -> BOQElementLinkListResponse:
-    """List BIM element links for a BOQ position."""
-    await _verify_boq_position_access(service, boq_position_id, user_id or "")
-    items = await service.list_links_for_position(boq_position_id)
-    return BOQElementLinkListResponse(
-        items=[BOQElementLinkResponse.model_validate(lnk) for lnk in items],
-        total=len(items),
-    )
-
-
-@router.get(
-    "/models/{model_id}/boq-links/",
-    response_model=BIMModelBOQLinksResponse,
-)
-async def list_model_boq_links(
-    model_id: uuid.UUID,
-    user_id: CurrentUserId = None,  # type: ignore[assignment]
-    _perm: None = Depends(RequirePermission("bim.read")),
-    service: BIMHubService = Depends(_get_service),
-) -> BIMModelBOQLinksResponse:
-    """Aggregate BOQ links for every element in a model.
-
-    Used by the "Linked BOQ" side-panel in the BIM viewer: the viewer
-    itself loads elements in ``skeleton`` mode (no boq_links) for speed,
-    so the panel needs a dedicated roll-up across the whole model.
-    """
-    await _verify_model_access(service, model_id, user_id or "")
-    rows = await service.list_links_for_model(model_id)
-    return BIMModelBOQLinksResponse(
-        items=[BIMModelBOQLinkAggregate.model_validate(r) for r in rows],
-        total=len(rows),
-    )
-
-
-@router.post("/links/", response_model=BOQElementLinkResponse, status_code=201)
-async def create_link(
-    data: BOQElementLinkCreate,
-    user_id: CurrentUserId,
-    _perm: None = Depends(RequirePermission("bim.create")),
-    service: BIMHubService = Depends(_get_service),
-) -> BOQElementLinkResponse:
-    """Create a link between a BOQ position and a BIM element."""
-    # Verify both sides: the BOQ position's project AND the BIM element's
-    # model/project. Prevents cross-project link forgery.
-    await _verify_boq_position_access(service, data.boq_position_id, user_id)
-    element = await service.get_element(data.bim_element_id)
-    if element is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="BIM element not found",
-        )
-    await _verify_model_access(service, element.model_id, user_id)
-    link = await service.create_link(data, user_id=user_id)
-    return BOQElementLinkResponse.model_validate(link)
-
-
-@router.delete("/links/{link_id}", status_code=204)
-async def delete_link(
-    link_id: uuid.UUID,
-    user_id: CurrentUserId,
-    _perm: None = Depends(RequirePermission("bim.delete")),
-    service: BIMHubService = Depends(_get_service),
-) -> None:
-    """Delete a BOQ-BIM link."""
-    # Resolve the link → element → model → project and verify access.
-    from app.modules.bim_hub.models import BOQElementLink
-
-    link = await service.session.get(BOQElementLink, link_id)
-    if link is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Link not found",
-        )
-    element = await service.get_element(link.bim_element_id)
-    if element is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Link not found",
-        )
-    await _verify_model_access(service, element.model_id, user_id)
-    await service.delete_link(link_id)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # Quantity Maps
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -2821,24 +2677,7 @@ async def bim_coverage_summary(
 
     elements_validated = 0
 
-    # Costed = subset of boq-linked elements where the linked position
-    # has non-zero unit_rate.  Skip if BOQ module is not loaded.
     elements_costed = 0
-    try:
-        from app.modules.boq.models import Position
-
-        costed_stmt = (
-            _select(func.count(distinct(BOQElementLink.bim_element_id)))
-            .join(BIMElement, BOQElementLink.bim_element_id == BIMElement.id)
-            .join(BIMModel, BIMElement.model_id == BIMModel.id)
-            .join(Position, BOQElementLink.boq_position_id == Position.id)
-            .where(BIMModel.project_id == project_id)
-            .where(Position.unit_rate != "0")
-            .where(Position.unit_rate != "")
-        )
-        elements_costed = int((await session.execute(costed_stmt)).scalar() or 0)
-    except (ImportError, AttributeError, SQLAlchemyError):
-        elements_costed = 0
 
     def _pct(numerator: int) -> float:
         if elements_total <= 0:
