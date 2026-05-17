@@ -1,6 +1,6 @@
 """AI Advisor — generates project recommendations using the LLM service.
 
-Reuses the existing AI client from app.modules.ai.ai_client.
+AI calls handled externally via estruflow-ai-parser HTTP service.
 Falls back to rule-based recommendations when no LLM is configured.
 """
 

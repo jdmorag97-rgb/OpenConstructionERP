@@ -119,25 +119,6 @@ class TestKpiRecalcLogging:
         assert finance_records[0].levelno == logging.WARNING
 
     @pytest.mark.asyncio
-    async def test_costmodel_failure_is_logged_at_warning(self, reporting_service, stub_session, caplog):
-        fake_cm_service = MagicMock()
-        fake_cm_service.get_dashboard = AsyncMock(side_effect=ConnectionError("qdrant refused"))
-
-        with (
-            caplog.at_level(logging.WARNING, logger="app.modules.reporting.service"),
-            patch(
-                "app.modules.costmodel.service.CostModelService",
-                return_value=fake_cm_service,
-            ),
-        ):
-            await reporting_service.auto_recalculate_kpis()
-
-        records = [rec for rec in caplog.records if "costmodel.get_dashboard" in rec.getMessage()]
-        assert records, "costmodel failure was not logged"
-        assert str(stub_session._project_id) in records[0].getMessage()
-        assert records[0].levelno == logging.WARNING
-
-    @pytest.mark.asyncio
     async def test_safety_failure_is_logged_at_warning(self, reporting_service, stub_session, caplog):
         fake_safety = MagicMock()
         fake_safety.get_stats = AsyncMock(side_effect=RuntimeError("safety-broken"))
@@ -205,13 +186,11 @@ class TestKpiRecalcLogging:
 
         Note: the downstream raw-SQL queries (submittals / schedule /
         risk) still fail against our _StubSession — that's fine, we
-        only assert that the module-service paths (finance / costmodel
-        / safety / rfi) are quiet when their services work.
+        only assert that the module-service paths (finance / safety / rfi)
+        are quiet when their services work.
         """
         happy_fin = MagicMock()
         happy_fin.get_dashboard = AsyncMock(return_value={"total_budget": "100", "total_actual": "75"})
-        happy_cm = MagicMock()
-        happy_cm.get_dashboard = AsyncMock(return_value={"cpi": 1.0, "spi": 0.95})
         happy_safety = MagicMock()
         happy_safety.get_stats = AsyncMock(
             return_value=SimpleNamespace(total_observations=5, closed_observations=3, total_incidents=1)
@@ -226,10 +205,6 @@ class TestKpiRecalcLogging:
                 return_value=happy_fin,
             ),
             patch(
-                "app.modules.costmodel.service.CostModelService",
-                return_value=happy_cm,
-            ),
-            patch(
                 "app.modules.safety.service.SafetyService",
                 return_value=happy_safety,
             ),
@@ -242,7 +217,6 @@ class TestKpiRecalcLogging:
 
         messages = [rec.getMessage() for rec in caplog.records]
         assert not any("finance.get_dashboard" in m for m in messages)
-        assert not any("costmodel.get_dashboard" in m for m in messages)
         assert not any("safety.get_stats" in m for m in messages)
         assert not any("rfi.get_stats" in m for m in messages)
 

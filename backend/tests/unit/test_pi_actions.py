@@ -1,8 +1,7 @@
 """Unit tests for project_intelligence.actions backend action executors.
 
-These tests exercise the three real backend actions (``_run_validation``,
-``_match_cwicr_prices``, ``_generate_schedule``) with the real domain
-services patched out. The goal is to guarantee that:
+These tests exercise the real backend action ``_generate_schedule``
+with the real domain services patched out. The goal is to guarantee that:
 
 1. Each action returns an ``ActionResult`` instance (never raises).
 2. When the underlying service succeeds, ``ActionResult.success`` is True
@@ -24,8 +23,6 @@ import pytest
 from app.modules.project_intelligence.actions import (
     ActionResult,
     _generate_schedule,
-    _match_cwicr_prices,
-    _run_validation,
 )
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -65,169 +62,6 @@ def _make_position(
         classification={},
         metadata_={},
     )
-
-
-# ── _run_validation ────────────────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_run_validation_success() -> None:
-    session = _make_session()
-    boq = _make_boq()
-    project_id = str(uuid.uuid4())
-
-    fake_report = {
-        "report_id": str(uuid.uuid4()),
-        "status": "passed",
-        "passed_count": 12,
-        "warning_count": 2,
-        "error_count": 0,
-    }
-
-    svc_instance = MagicMock()
-    svc_instance.run_validation = AsyncMock(return_value=fake_report)
-
-    with (
-        patch(
-            "app.modules.project_intelligence.actions._find_project_boq",
-            AsyncMock(return_value=boq),
-        ),
-        patch(
-            "app.modules.validation.service.ValidationModuleService",
-            return_value=svc_instance,
-        ),
-    ):
-        result = await _run_validation(session, project_id)
-
-    assert isinstance(result, ActionResult)
-    assert result.success is True
-    assert result.data is not None
-    assert result.data["report_id"] == fake_report["report_id"]
-    assert result.data["error_count"] == 0
-    svc_instance.run_validation.assert_awaited_once()
-
-
-@pytest.mark.asyncio
-async def test_run_validation_no_boq() -> None:
-    session = _make_session()
-    with patch(
-        "app.modules.project_intelligence.actions._find_project_boq",
-        AsyncMock(return_value=None),
-    ):
-        result = await _run_validation(session, str(uuid.uuid4()))
-
-    assert isinstance(result, ActionResult)
-    assert result.success is False
-    assert "No BOQ" in result.message
-
-
-@pytest.mark.asyncio
-async def test_run_validation_service_raises() -> None:
-    session = _make_session()
-    boq = _make_boq()
-    svc_instance = MagicMock()
-    svc_instance.run_validation = AsyncMock(side_effect=RuntimeError("engine down"))
-
-    with (
-        patch(
-            "app.modules.project_intelligence.actions._find_project_boq",
-            AsyncMock(return_value=boq),
-        ),
-        patch(
-            "app.modules.validation.service.ValidationModuleService",
-            return_value=svc_instance,
-        ),
-    ):
-        result = await _run_validation(session, str(uuid.uuid4()))
-
-    assert isinstance(result, ActionResult)
-    assert result.success is False
-    assert "engine down" in result.message
-
-
-# ── _match_cwicr_prices ────────────────────────────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_match_cwicr_prices_updates_zero_priced() -> None:
-    session = _make_session()
-    boq = _make_boq()
-    # One zero-priced position + one already priced + one section header.
-    zero = _make_position(unit_rate="0", quantity="5")
-    priced = _make_position(unit_rate="100", quantity="5")
-    header = _make_position(unit_rate="0", quantity="0", description="Section", unit="")
-    boq.positions = [zero, priced, header]
-
-    suggestion = SimpleNamespace(
-        cost_item_id=str(uuid.uuid4()),
-        code="CWR-001",
-        unit_rate=150.0,
-        score=0.87,
-    )
-    cost_svc_instance = MagicMock()
-    cost_svc_instance.suggest_for_bim_element = AsyncMock(return_value=[suggestion])
-
-    with (
-        patch(
-            "app.modules.project_intelligence.actions._find_project_boq",
-            AsyncMock(return_value=boq),
-        ),
-        patch(
-            "app.modules.costs.service.CostItemService",
-            return_value=cost_svc_instance,
-        ),
-    ):
-        result = await _match_cwicr_prices(session, str(uuid.uuid4()))
-
-    assert isinstance(result, ActionResult)
-    assert result.success is True
-    assert result.data["count_updated"] == 1
-    assert result.data["count_skipped"] == 0
-    # Zero position now carries the matched rate; priced and header untouched.
-    from decimal import Decimal
-
-    assert Decimal(zero.unit_rate) == Decimal("150")
-    assert Decimal(zero.total) == Decimal("750")
-    assert priced.unit_rate == "100"
-    session.commit.assert_awaited()
-
-
-@pytest.mark.asyncio
-async def test_match_cwicr_prices_no_match_is_skipped() -> None:
-    session = _make_session()
-    boq = _make_boq()
-    boq.positions = [_make_position(unit_rate="0", quantity="5")]
-
-    cost_svc_instance = MagicMock()
-    cost_svc_instance.suggest_for_bim_element = AsyncMock(return_value=[])
-
-    with (
-        patch(
-            "app.modules.project_intelligence.actions._find_project_boq",
-            AsyncMock(return_value=boq),
-        ),
-        patch(
-            "app.modules.costs.service.CostItemService",
-            return_value=cost_svc_instance,
-        ),
-    ):
-        result = await _match_cwicr_prices(session, str(uuid.uuid4()))
-
-    assert result.success is True
-    assert result.data["count_updated"] == 0
-    assert result.data["count_skipped"] == 1
-
-
-@pytest.mark.asyncio
-async def test_match_cwicr_prices_no_boq() -> None:
-    session = _make_session()
-    with patch(
-        "app.modules.project_intelligence.actions._find_project_boq",
-        AsyncMock(return_value=None),
-    ):
-        result = await _match_cwicr_prices(session, str(uuid.uuid4()))
-    assert result.success is False
-    assert "No BOQ" in result.message
 
 
 # ── _generate_schedule ─────────────────────────────────────────────────────

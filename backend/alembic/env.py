@@ -19,7 +19,6 @@ _MIGRATION_ENV_TAG: str = "37efb59ad47d364e"
 # Core models (not in modules/)
 from app.core import audit as _audit_core  # noqa: F401
 from app.database import Base
-from app.modules.ai import models as _ai  # noqa: F401
 from app.modules.assemblies import models as _asm  # noqa: F401
 from app.modules.bim_hub import models as _bim_hub  # noqa: F401
 from app.modules.boq import models as _boq  # noqa: F401
@@ -29,7 +28,6 @@ from app.modules.changeorders import models as _changeorders  # noqa: F401
 from app.modules.collaboration import models as _collaboration  # noqa: F401
 from app.modules.contacts import models as _contacts  # noqa: F401
 from app.modules.correspondence import models as _correspondence  # noqa: F401
-from app.modules.costmodel import models as _cm  # noqa: F401
 from app.modules.costs import models as _costs  # noqa: F401
 from app.modules.documents import models as _documents  # noqa: F401
 
@@ -57,14 +55,12 @@ from app.modules.submittals import models as _submittals  # noqa: F401
 from app.modules.takeoff import models as _takeoff  # noqa: F401
 from app.modules.tasks import models as _tasks  # noqa: F401
 from app.modules.teams import models as _teams  # noqa: F401
-from app.modules.tendering import models as _tender  # noqa: F401
 from app.modules.transmittals import models as _transmittals  # noqa: F401
 
 # Import all module models so they're registered with Base.metadata.
 # This is done automatically by the module loader at runtime,
 # but we need it here for autogenerate to work.
 from app.modules.users import models as _users  # noqa: F401
-from app.modules.validation import models as _validation  # noqa: F401
 
 config = context.config
 settings = get_settings()
