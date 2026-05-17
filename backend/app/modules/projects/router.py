@@ -298,37 +298,7 @@ async def project_dashboard(
     boq_count = 0
     position_count = 0
     boq_total_value = 0.0
-    boq_ids: list = []
     markups_from_boq = 0
-
-    try:
-        from app.modules.boq.models import BOQ, BOQMarkup, Position
-
-        boq_count = (await session.execute(select(func.count(BOQ.id)).where(BOQ.project_id == project_id))).scalar_one()
-
-        boq_ids_result = await session.execute(select(BOQ.id).where(BOQ.project_id == project_id))
-        boq_ids = [row[0] for row in boq_ids_result.all()]
-
-        if boq_ids:
-            position_count = (
-                await session.execute(select(func.count(Position.id)).where(Position.boq_id.in_(boq_ids)))
-            ).scalar_one()
-
-            total_result = (
-                await session.execute(select(func.sum(cast(Position.total, Float))).where(Position.boq_id.in_(boq_ids)))
-            ).scalar_one()
-            boq_total_value = round(total_result or 0.0, 2)
-
-            markups_from_boq = (
-                await session.execute(select(func.count(BOQMarkup.id)).where(BOQMarkup.boq_id.in_(boq_ids)))
-            ).scalar_one()
-    except Exception:
-        logger.debug("BOQ query failed", exc_info=True)
-
-    if boq_total_value > 0:
-        budget_section["original"] = str(boq_total_value)
-        budget_section["revised"] = str(boq_total_value)
-        budget_section["forecast"] = str(boq_total_value)
 
     # ── Schedule ───────────────────────────────────────────────────────────
     schedule_section: dict = {
@@ -502,32 +472,6 @@ async def project_dashboard(
     except Exception:
         logger.debug("Dashboard: risk items query failed", exc_info=True)
 
-    # Validation score from BOQ positions
-    if boq_ids:
-        try:
-            from app.modules.boq.models import Position as _Pos
-
-            val_total = (
-                await session.execute(
-                    select(func.count(_Pos.id)).where(
-                        _Pos.boq_id.in_(boq_ids),
-                        _Pos.validation_status.isnot(None),
-                        _Pos.validation_status != "pending",
-                    )
-                )
-            ).scalar_one()
-            val_passed = (
-                await session.execute(
-                    select(func.count(_Pos.id)).where(
-                        _Pos.boq_id.in_(boq_ids),
-                        _Pos.validation_status == "passed",
-                    )
-                )
-            ).scalar_one()
-            if val_total > 0:
-                quality_section["validation_score"] = str(round(val_passed / val_total, 2))
-        except Exception:
-            logger.debug("Dashboard: validation score query failed", exc_info=True)
 
     # ── Documents ──────────────────────────────────────────────────────────
     documents_section: dict = {
@@ -965,56 +909,9 @@ async def dashboard_cards(
 
     project_ids = [p.id for p in all_projects]
 
-    # ── BOQ total value per project ─────────────────────────────────────
     boq_values: dict[str, float] = {}
     boq_counts: dict[str, int] = {}
     position_counts: dict[str, int] = {}
-    try:
-        from app.modules.boq.models import BOQ, Position
-
-        # BOQ count per project
-        boq_count_rows = (
-            await session.execute(
-                select(BOQ.project_id, func.count(BOQ.id))
-                .where(BOQ.project_id.in_(project_ids))
-                .group_by(BOQ.project_id)
-            )
-        ).all()
-        for pid, cnt in boq_count_rows:
-            boq_counts[str(pid)] = cnt
-
-        # Get all BOQ IDs grouped by project
-        boq_rows = (
-            await session.execute(
-                select(BOQ.id, BOQ.project_id).where(BOQ.project_id.in_(project_ids))
-            )
-        ).all()
-        boq_id_to_project: dict[str, str] = {}
-        for bid, pid in boq_rows:
-            boq_id_to_project[str(bid)] = str(pid)
-
-        if boq_id_to_project:
-            all_boq_ids = [uuid.UUID(bid) for bid in boq_id_to_project]
-
-            # Sum of position totals per BOQ
-            pos_rows = (
-                await session.execute(
-                    select(
-                        Position.boq_id,
-                        func.sum(cast(Position.total, Float)).label("total_value"),
-                        func.count(Position.id).label("pos_count"),
-                    )
-                    .where(Position.boq_id.in_(all_boq_ids))
-                    .group_by(Position.boq_id)
-                )
-            ).all()
-            for boq_id, total_val, pos_cnt in pos_rows:
-                pid = boq_id_to_project.get(str(boq_id), "")
-                if pid:
-                    boq_values[pid] = boq_values.get(pid, 0.0) + (total_val or 0.0)
-                    position_counts[pid] = position_counts.get(pid, 0) + (pos_cnt or 0)
-    except Exception:
-        logger.debug("Dashboard cards: BOQ query failed", exc_info=True)
 
     # ── Open tasks per project ──────────────────────────────────────────
     open_tasks: dict[str, int] = {}

@@ -493,56 +493,12 @@ async def handle_get_project_summary(
 async def handle_get_boq_items(
     session: AsyncSession, args: dict[str, Any], user_id: str
 ) -> dict[str, Any]:
-    """Get BOQ positions for a project's first BOQ."""
-    try:
-        from app.modules.boq.service import BOQService
-
-        try:
-            pid = _parse_uuid(args.get("project_id"), "project_id")
-            await _require_project_access(session, pid, user_id)
-        except ToolAuthError as _te:
-            return _auth_error(str(_te))
-        svc = BOQService(session)
-        boqs, total_boqs = await svc.list_boqs_for_project(pid, limit=5)
-        if not boqs:
-            return {
-                "renderer": "boq_table",
-                "data": {"positions": [], "boq_name": None},
-                "summary": "No BOQs found for this project",
-            }
-
-        boq = boqs[0]
-        boq_data = await svc.get_boq_with_positions(boq.id)
-        positions = []
-        for pos in boq_data.positions:
-            positions.append({
-                "id": str(pos.id),
-                "ordinal": pos.ordinal,
-                "description": pos.description or "",
-                "unit": pos.unit or "",
-                "quantity": float(pos.quantity or 0),
-                "unit_rate": float(pos.unit_rate or 0),
-                "total": float(pos.total or 0),
-                "source": getattr(pos, "source", ""),
-            })
-
-        return {
-            "renderer": "boq_table",
-            "data": {
-                "boq_id": str(boq.id),
-                "boq_name": boq.name,
-                "positions": positions,
-                "position_count": len(positions),
-                "grand_total": float(boq_data.grand_total or 0),
-            },
-            "summary": (
-                f"BOQ '{boq.name}': {len(positions)} positions, "
-                f"grand total {boq_data.grand_total}"
-            ),
-        }
-    except Exception as exc:
-        logger.exception("handle_get_boq_items failed")
-        return {"renderer": "error", "data": {"error": str(exc)}, "summary": f"Error: {exc}"}
+    """BOQ module removed — not available in Estruflow ERP."""
+    return {
+        "renderer": "error",
+        "data": {"error": "BOQ module not available"},
+        "summary": "BOQ module removed (pre-Ola 3)",
+    }
 
 
 async def handle_get_schedule(
@@ -666,99 +622,23 @@ async def handle_get_risk_register(
 async def handle_search_cwicr_database(
     session: AsyncSession, args: dict[str, Any], user_id: str
 ) -> dict[str, Any]:
-    """Search the CWICR cost database."""
-    try:
-        from app.modules.costs.repository import CostItemRepository
-
-        query = args.get("query", "")
-        region = args.get("region")
-        repo = CostItemRepository(session)
-        items, total = await repo.search(q=query, region=region, limit=20)
-
-        results = []
-        for item in items:
-            results.append({
-                "id": str(item.id),
-                "code": item.code,
-                "description": item.description or "",
-                "unit": item.unit or "",
-                "rate": str(item.rate) if item.rate else "0",
-                "source": getattr(item, "source", ""),
-                "region": getattr(item, "region", ""),
-            })
-
-        return {
-            "renderer": "cost_items_table",
-            "data": {"items": results, "total": total, "query": query},
-            "summary": f"{total} cost items found for '{query}'",
-        }
-    except Exception as exc:
-        logger.exception("handle_search_cwicr_database failed")
-        return {"renderer": "error", "data": {"error": str(exc)}, "summary": f"Error: {exc}"}
+    """Cost database module removed — not available in Estruflow ERP."""
+    return {
+        "renderer": "error",
+        "data": {"error": "Cost database module not available"},
+        "summary": "Costs module removed (pre-Ola 3)",
+    }
 
 
 async def handle_get_cost_model(
     session: AsyncSession, args: dict[str, Any], user_id: str
 ) -> dict[str, Any]:
-    """Get cost model summary for a project from its first BOQ."""
-    try:
-        from app.modules.boq.service import BOQService
-
-        try:
-            pid = _parse_uuid(args.get("project_id"), "project_id")
-            await _require_project_access(session, pid, user_id)
-        except ToolAuthError as _te:
-            return _auth_error(str(_te))
-        svc = BOQService(session)
-        boqs, _ = await svc.list_boqs_for_project(pid, limit=1)
-        if not boqs:
-            return {
-                "renderer": "cost_model",
-                "data": {},
-                "summary": "No BOQs found — cannot compute cost model",
-            }
-
-        boq = boqs[0]
-        structured = await svc.get_boq_structured(boq.id)
-
-        # Extract cost breakdown
-        sections = []
-        for sec in getattr(structured, "sections", []):
-            sections.append({
-                "title": getattr(sec, "title", ""),
-                "subtotal": float(getattr(sec, "subtotal", 0)),
-                "position_count": len(getattr(sec, "positions", [])),
-            })
-
-        markups = []
-        for m in getattr(structured, "markups", []):
-            markups.append({
-                "name": getattr(m, "name", ""),
-                "category": getattr(m, "category", ""),
-                "percentage": float(getattr(m, "percentage", 0)),
-                "amount": float(getattr(m, "amount", 0)),
-            })
-
-        return {
-            "renderer": "cost_model",
-            "data": {
-                "boq_id": str(boq.id),
-                "boq_name": boq.name,
-                "direct_cost": float(getattr(structured, "direct_cost", 0)),
-                "net_total": float(getattr(structured, "net_total", 0)),
-                "grand_total": float(getattr(structured, "grand_total", 0)),
-                "sections": sections,
-                "markups": markups,
-            },
-            "summary": (
-                f"Cost model for '{boq.name}': "
-                f"direct={getattr(structured, 'direct_cost', 0)}, "
-                f"grand total={getattr(structured, 'grand_total', 0)}"
-            ),
-        }
-    except Exception as exc:
-        logger.exception("handle_get_cost_model failed")
-        return {"renderer": "error", "data": {"error": str(exc)}, "summary": f"Error: {exc}"}
+    """BOQ/cost model removed — not available in Estruflow ERP."""
+    return {
+        "renderer": "error",
+        "data": {"error": "BOQ/cost model module not available"},
+        "summary": "BOQ module removed (pre-Ola 3)",
+    }
 
 
 async def handle_compare_projects(
@@ -831,59 +711,12 @@ async def handle_run_validation(
 async def handle_create_boq_item(
     session: AsyncSession, args: dict[str, Any], user_id: str
 ) -> dict[str, Any]:
-    """Create a new BOQ position in a project's first BOQ."""
-    try:
-        from app.modules.boq.schemas import PositionCreate
-        from app.modules.boq.service import BOQService
-
-        try:
-            pid = _parse_uuid(args.get("project_id"), "project_id")
-            await _require_project_access(session, pid, user_id)
-        except ToolAuthError as _te:
-            return _auth_error(str(_te))
-        svc = BOQService(session)
-        boqs, _ = await svc.list_boqs_for_project(pid, limit=1)
-        if not boqs:
-            return {
-                "renderer": "error",
-                "data": {"error": "No BOQs found for this project"},
-                "summary": "Error: No BOQs found — create a BOQ first",
-            }
-
-        boq = boqs[0]
-
-        # Auto-generate ordinal
-        boq_data = await svc.get_boq_with_positions(boq.id)
-        next_ordinal = f"{len(boq_data.positions) + 1:03d}"
-
-        data = PositionCreate(
-            boq_id=boq.id,
-            ordinal=next_ordinal,
-            description=args.get("description", ""),
-            unit=args.get("unit", "pcs"),
-            quantity=args.get("quantity", 0),
-            unit_rate=args.get("unit_rate", 0),
-        )
-        position = await svc.add_position(data)
-        total = float(args.get("quantity", 0)) * float(args.get("unit_rate", 0))
-
-        return {
-            "renderer": "boq_item_created",
-            "data": {
-                "id": str(position.id),
-                "boq_id": str(boq.id),
-                "ordinal": next_ordinal,
-                "description": args.get("description", ""),
-                "unit": args.get("unit", "pcs"),
-                "quantity": float(args.get("quantity", 0)),
-                "unit_rate": float(args.get("unit_rate", 0)),
-                "total": total,
-            },
-            "summary": f"Created position {next_ordinal}: {args.get('description', '')} (total: {total:.2f})",
-        }
-    except Exception as exc:
-        logger.exception("handle_create_boq_item failed")
-        return {"renderer": "error", "data": {"error": str(exc)}, "summary": f"Error: {exc}"}
+    """BOQ module removed — not available in Estruflow ERP."""
+    return {
+        "renderer": "error",
+        "data": {"error": "BOQ module not available"},
+        "summary": "BOQ module removed (pre-Ola 3)",
+    }
 
 
 # ── Semantic memory tool handlers ────────────────────────────────────────
@@ -954,10 +787,12 @@ async def _generic_collection_search(
 async def handle_search_boq_positions(
     session: AsyncSession, args: dict[str, Any], user_id: str
 ) -> dict[str, Any]:
-    _ = (session, user_id)
-    return await _generic_collection_search(
-        args, short_type="boq", summary_label="BOQ search"
-    )
+    """BOQ module removed — not available in Estruflow ERP."""
+    return {
+        "renderer": "error",
+        "data": {"error": "BOQ module not available"},
+        "summary": "BOQ module removed (pre-Ola 3)",
+    }
 
 
 async def handle_search_documents(

@@ -20,13 +20,11 @@ _MIGRATION_ENV_TAG: str = "37efb59ad47d364e"
 from app.core import audit as _audit_core  # noqa: F401
 from app.database import Base
 from app.modules.bim_hub import models as _bim_hub  # noqa: F401
-from app.modules.boq import models as _boq  # noqa: F401
 from app.modules.cde import models as _cde  # noqa: F401
 from app.modules.changeorders import models as _changeorders  # noqa: F401
 from app.modules.collaboration import models as _collaboration  # noqa: F401
 from app.modules.contacts import models as _contacts  # noqa: F401
 from app.modules.correspondence import models as _correspondence  # noqa: F401
-from app.modules.costs import models as _costs  # noqa: F401
 from app.modules.documents import models as _documents  # noqa: F401
 
 # Enterprise / feature-pack modules

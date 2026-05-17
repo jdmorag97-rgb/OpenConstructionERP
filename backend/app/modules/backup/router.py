@@ -65,9 +65,6 @@ class ValidateResponse(BaseModel):
 _BACKUP_TABLE_DEFS: list[tuple[str, str, str, str]] = [
     ("users", "oe_users_user", "app.modules.users.models", "User"),
     ("projects", "oe_projects_project", "app.modules.projects.models", "Project"),
-    ("boqs", "oe_boq_boq", "app.modules.boq.models", "BOQ"),
-    ("positions", "oe_boq_position", "app.modules.boq.models", "Position"),
-    ("markups", "oe_boq_markup", "app.modules.boq.models", "BOQMarkup"),
     ("schedules", "oe_schedule_schedule", "app.modules.schedule.models", "Schedule"),
     ("activities", "oe_schedule_activity", "app.modules.schedule.models", "Activity"),
     ("risks", "oe_risk_register", "app.modules.risk.models", "RiskItem"),

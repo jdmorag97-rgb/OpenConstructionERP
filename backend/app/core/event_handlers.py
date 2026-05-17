@@ -578,95 +578,8 @@ async def _handle_po_issued(event: Event) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 9. estimate.approved -> auto-populate project budget from BOQ
+# 9. estimate.approved -> removed (BOQ out of scope)
 # ---------------------------------------------------------------------------
-
-async def _handle_estimate_approved(event: Event) -> None:
-    """BOQ approved -> create project_budgets.original_budget entries.
-
-    When a BOQ is locked/approved, auto-create ProjectBudget rows from BOQ
-    section totals grouped by WBS or parent position.
-
-    Expected event.data:
-        boq_id: str (UUID)
-        project_id: str (UUID)
-    """
-    try:
-        data = event.data
-        boq_id = data.get("boq_id")
-        project_id = data.get("project_id")
-
-        if not boq_id or not project_id:
-            logger.debug("estimate.approved: missing boq_id or project_id")
-            return
-
-        from decimal import Decimal, InvalidOperation
-
-        from sqlalchemy import select
-
-        from app.database import async_session_factory
-        from app.modules.boq.models import Position
-        from app.modules.finance.models import ProjectBudget
-
-        async with async_session_factory() as session:
-            # Load all positions for this BOQ
-            result = await session.execute(
-                select(Position).where(Position.boq_id == boq_id)
-            )
-            positions = result.scalars().all()
-
-            if not positions:
-                logger.debug("estimate.approved: no positions for boq %s", boq_id)
-                return
-
-            # Group totals by wbs_id (or "general" if unassigned)
-            wbs_totals: dict[str, Decimal] = {}
-            for pos in positions:
-                wbs_key = pos.wbs_id or "general"
-                try:
-                    total = Decimal(str(pos.total))
-                except (InvalidOperation, ValueError):
-                    total = Decimal("0")
-                wbs_totals[wbs_key] = wbs_totals.get(wbs_key, Decimal("0")) + total
-
-            # Upsert budget lines for each WBS group
-            created_count = 0
-            for wbs_key, total in wbs_totals.items():
-                existing = await session.execute(
-                    select(ProjectBudget).where(
-                        ProjectBudget.project_id == project_id,
-                        ProjectBudget.wbs_id == (wbs_key if wbs_key != "general" else None),
-                        ProjectBudget.category == "estimate",
-                    )
-                )
-                budget = existing.scalar_one_or_none()
-
-                if budget:
-                    budget.original_budget = str(total)
-                    budget.revised_budget = str(total)
-                else:
-                    session.add(
-                        ProjectBudget(
-                            project_id=project_id,
-                            wbs_id=wbs_key if wbs_key != "general" else None,
-                            category="estimate",
-                            original_budget=str(total),
-                            revised_budget=str(total),
-                        )
-                    )
-                    created_count += 1
-
-            await session.commit()
-
-        logger.info(
-            "estimate.approved: populated %d budget lines for project %s (boq %s)",
-            created_count,
-            project_id,
-            boq_id,
-        )
-    except Exception:
-        logger.exception("Error handling estimate.approved")
-
 
 # ---------------------------------------------------------------------------
 # 10. schedule.progress_updated -> EVM snapshot
@@ -1727,7 +1640,6 @@ def register_event_handlers() -> None:
     event_bus.subscribe("document.revision.created", _handle_document_revision_created)
     event_bus.subscribe("invoice.paid", _handle_invoice_paid)
     event_bus.subscribe("po.issued", _handle_po_issued)
-    event_bus.subscribe("estimate.approved", _handle_estimate_approved)
     event_bus.subscribe("schedule.progress_updated", _handle_schedule_progress)
     event_bus.subscribe("bim_model.ready", _handle_bim_model_ready)
     event_bus.subscribe("bim_model.new_version", _handle_bim_model_new_version)

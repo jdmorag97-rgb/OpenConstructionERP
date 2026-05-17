@@ -1051,29 +1051,10 @@ class ScheduleService:
                 detail="Schedule already has activities. Delete them first to regenerate.",
             )
 
-        # Fetch BOQ with positions
-        from app.modules.boq.repository import BOQRepository, PositionRepository
-
-        boq_repo = BOQRepository(self.session)
-        pos_repo = PositionRepository(self.session)
-
-        boq = await boq_repo.get_by_id(boq_id)
-        if boq is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="BOQ not found",
-            )
-
-        raw_positions, _ = await pos_repo.list_for_boq(boq_id, limit=5000)
-        # Force-load all attributes in session context to prevent MissingGreenlet
-        for p in raw_positions:
-            _ = p.id, p.parent_id, p.ordinal, p.description, p.unit
-            _ = p.quantity, p.unit_rate, p.total, p.metadata_
-        if not raw_positions:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="BOQ has no positions",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="BOQ module removed — schedule generation from BOQ not available.",
+        )
 
         # Eagerly snapshot all needed fields to avoid lazy-loading / greenlet issues.
         # Access every attribute while still inside the async session context.
@@ -1915,7 +1896,6 @@ class ScheduleService:
         """Roll up labour cost per schedule phase (RFC 25)."""
         from sqlalchemy import select as _select
 
-        from app.modules.boq.models import Position
         from app.modules.schedule.models import Activity, Schedule
         from app.modules.schedule.schemas import (
             LaborCostByPhaseResponse,
@@ -1933,23 +1913,7 @@ class ScheduleService:
         if not activities:
             return LaborCostByPhaseResponse()
 
-        # Gather linked BOQ position ids for aggregate lookup
-        all_boq_ids: list[uuid.UUID] = []
-        for act in activities:
-            for pid in act.boq_position_ids or []:
-                try:
-                    all_boq_ids.append(uuid.UUID(str(pid)))
-                except (TypeError, ValueError):
-                    continue
-
         position_totals: dict[uuid.UUID, float] = {}
-        if all_boq_ids:
-            pos_stmt = _select(Position.id, Position.total).where(
-                Position.id.in_(all_boq_ids)
-            )
-            pos_result = await self.session.execute(pos_stmt)
-            for pid, total in pos_result.all():
-                position_totals[pid] = _str_to_float(total)
 
         phases: dict[str, dict[str, object]] = {}
         for act in activities:

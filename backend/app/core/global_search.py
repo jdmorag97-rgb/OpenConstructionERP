@@ -37,37 +37,6 @@ async def global_search(
     pattern = f"%{query.strip()}%"
     results: list[dict[str, Any]] = []
 
-    # --- BOQ Positions ---
-    try:
-        from app.modules.boq.models import Position
-
-        stmt = select(Position).where(
-            or_(
-                Position.description.ilike(pattern),
-                Position.ordinal.ilike(pattern),
-            )
-        )
-        if project_id:
-            stmt = stmt.where(Position.boq_id.in_(
-                select(_boq_id_for_project(project_id))
-            ))
-        stmt = stmt.limit(limit)
-        rows = (await session.execute(stmt)).scalars().all()
-        for row in rows:
-            # Compute a simple relevance score: exact match in ordinal > description
-            score = _score(query, row.ordinal, row.description)
-            results.append({
-                "module": "boq",
-                "type": "position",
-                "id": str(row.id),
-                "title": f"{row.ordinal} — {row.description[:120]}",
-                "subtitle": f"{row.quantity} {row.unit}",
-                "url": f"/boq/{row.boq_id}",
-                "score": score,
-            })
-    except Exception:
-        logger.debug("global_search: BOQ positions search skipped", exc_info=True)
-
     # --- Contacts ---
     try:
         from app.modules.contacts.models import Contact
@@ -181,31 +150,6 @@ async def global_search(
     except Exception:
         logger.debug("global_search: tasks search skipped", exc_info=True)
 
-    # --- Cost Items ---
-    try:
-        from app.modules.costs.models import CostItem
-
-        stmt = select(CostItem).where(
-            or_(
-                CostItem.code.ilike(pattern),
-                CostItem.description.ilike(pattern),
-            )
-        ).limit(limit)
-        rows = (await session.execute(stmt)).scalars().all()
-        for row in rows:
-            score = _score(query, row.code, row.description)
-            results.append({
-                "module": "costs",
-                "type": "cost_item",
-                "id": str(row.id),
-                "title": f"{row.code} — {row.description[:120]}",
-                "subtitle": f"{row.rate} {row.currency}/{row.unit}",
-                "url": "/costs",
-                "score": score,
-            })
-    except Exception:
-        logger.debug("global_search: cost items search skipped", exc_info=True)
-
     # --- Meetings ---
     try:
         from app.modules.meetings.models import Meeting
@@ -295,13 +239,6 @@ async def global_search(
     # Sort by relevance score descending and limit
     results.sort(key=lambda r: r["score"], reverse=True)
     return results[:limit]
-
-
-def _boq_id_for_project(project_id: str):
-    """Return a subquery selecting BOQ IDs for a specific project."""
-    from app.modules.boq.models import BOQ
-
-    return select(BOQ.id).where(BOQ.project_id == project_id).scalar_subquery()
 
 
 def _score(query: str, primary: str, secondary: str) -> float:

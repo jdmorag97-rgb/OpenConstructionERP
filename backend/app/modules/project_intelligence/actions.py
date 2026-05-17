@@ -210,25 +210,8 @@ async def _find_project_boq(
     session: AsyncSession,
     project_id: str,
 ):
-    """Return the first (oldest) BOQ for a project, or None.
-
-    Used by every action that operates on "the project's main BOQ". We pick
-    the oldest BOQ deterministically so repeated action runs hit the same
-    target. Callers must handle the None case.
-    """
-    from sqlalchemy import select
-
-    from app.modules.boq.models import BOQ
-
-    pid = _to_uuid(project_id)
-    stmt = (
-        select(BOQ)
-        .where(BOQ.project_id == pid)
-        .order_by(BOQ.created_at.asc())
-        .limit(1)
-    )
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
+    """BOQ module removed — always returns None."""
+    return None
 
 
 # ── Backend action implementations ────────────────────────────────────────
@@ -266,122 +249,10 @@ async def _match_cwicr_prices(
     the line total. Positions with no usable match are counted as
     ``skipped``. No redirect fallback.
     """
-    try:
-        boq = await _find_project_boq(session, project_id)
-        if boq is None:
-            return ActionResult(
-                success=False,
-                message="No BOQ found for this project. Create a BOQ first.",
-            )
-
-        from decimal import Decimal, InvalidOperation
-
-        from app.modules.costs.service import CostItemService
-
-        cost_svc = CostItemService(session)
-
-        def _is_zero_or_blank(raw: str | None) -> bool:
-            if raw is None or str(raw).strip() == "":
-                return True
-            try:
-                return Decimal(str(raw)) == 0
-            except (InvalidOperation, ValueError):
-                return True
-
-        # `positions` relation is selectin-loaded; iterate the live list.
-        count_total = 0
-        count_updated = 0
-        count_skipped = 0
-        updated_ids: list[str] = []
-
-        for pos in list(boq.positions):
-            # Only consider leaf positions (rows that actually carry a price).
-            # Section headers typically have empty unit/description — skip.
-            if not pos.description or (pos.unit or "").strip() == "":
-                continue
-            if not _is_zero_or_blank(pos.unit_rate):
-                continue
-
-            count_total += 1
-
-            suggestions = await cost_svc.suggest_for_bim_element(
-                element_type=None,
-                name=pos.description,
-                discipline=None,
-                properties=None,
-                quantities=None,
-                classification=pos.classification or None,
-                limit=1,
-                region=None,
-            )
-            if not suggestions:
-                count_skipped += 1
-                continue
-
-            top = suggestions[0]
-            try:
-                rate_dec = Decimal(str(top.unit_rate))
-            except (InvalidOperation, ValueError):
-                count_skipped += 1
-                continue
-
-            try:
-                qty_dec = Decimal(str(pos.quantity or "0"))
-            except (InvalidOperation, ValueError):
-                qty_dec = Decimal("0")
-
-            pos.unit_rate = str(rate_dec)
-            pos.total = str(qty_dec * rate_dec)
-            meta = dict(pos.metadata_ or {})
-            meta["cwicr_matched_code"] = top.code
-            meta["cwicr_matched_score"] = top.score
-            pos.metadata_ = meta
-
-            count_updated += 1
-            updated_ids.append(str(pos.id))
-
-        if count_updated > 0:
-            await session.commit()
-
-        # Best-effort event so downstream listeners can react.
-        try:
-            from app.core.events import event_bus
-
-            await event_bus.publish(
-                "boq.prices.matched",
-                {
-                    "project_id": str(project_id),
-                    "boq_id": str(boq.id),
-                    "updated_count": count_updated,
-                    "skipped_count": count_skipped,
-                    "total_candidates": count_total,
-                },
-                source_module="oe_project_intelligence",
-            )
-        except Exception:
-            logger.debug("boq.prices.matched event publish skipped", exc_info=True)
-
-        return ActionResult(
-            success=True,
-            message=(
-                f"{count_updated} positions priced from CWICR "
-                f"({count_skipped} skipped, {count_total} candidates)"
-            ),
-            redirect_url="/boq",
-            data={
-                "boq_id": str(boq.id),
-                "count_updated": count_updated,
-                "count_skipped": count_skipped,
-                "count_total": count_total,
-                "updated_position_ids": updated_ids[:50],
-            },
-        )
-    except Exception as exc:
-        logger.exception("_match_cwicr_prices failed for project %s", project_id)
-        return ActionResult(
-            success=False,
-            message=f"Price matching failed: {str(exc)[:200]}",
-        )
+    return ActionResult(
+        success=False,
+        message="BOQ and cost modules not available in Estruflow ERP (removed pre-Ola 3).",
+    )
 
 
 async def _generate_schedule(

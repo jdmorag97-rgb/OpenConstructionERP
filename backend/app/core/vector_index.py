@@ -74,7 +74,6 @@ logger = logging.getLogger(__name__)
 #: ``uuid.uuid5(uuid.NAMESPACE_URL, ...)`` for the construction.
 _COLLECTION_NAMESPACE = "ff23af8d-4541-57b7-864c-baaaf9685dc0"
 
-COLLECTION_BOQ = "oe_boq_positions"
 COLLECTION_DOCUMENTS = "oe_documents"
 COLLECTION_TASKS = "oe_tasks"
 COLLECTION_RISKS = "oe_risks"
@@ -85,7 +84,6 @@ COLLECTION_REQUIREMENTS = "oe_requirements"
 #: Ordered tuple used by :func:`unified_search` to fan out to every
 #: registered collection when the caller doesn't specify ``types``.
 ALL_COLLECTIONS: tuple[str, ...] = (
-    COLLECTION_BOQ,
     COLLECTION_DOCUMENTS,
     COLLECTION_TASKS,
     COLLECTION_RISKS,
@@ -97,7 +95,6 @@ ALL_COLLECTIONS: tuple[str, ...] = (
 #: Map collection name → human-readable module label.  Used by the
 #: frontend Cmd+K modal to render facet badges and group hits.
 COLLECTION_LABELS: dict[str, str] = {
-    COLLECTION_BOQ: "BOQ",
     COLLECTION_DOCUMENTS: "Documents",
     COLLECTION_TASKS: "Tasks",
     COLLECTION_RISKS: "Risks",

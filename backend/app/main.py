@@ -160,7 +160,6 @@ async def _auto_backfill_vector_collections() -> None:
         from app.core.vector import vector_count_collection
         from app.core.vector_index import (
             COLLECTION_BIM_ELEMENTS,
-            COLLECTION_BOQ,
             COLLECTION_CHAT,
             COLLECTION_DOCUMENTS,
             COLLECTION_REQUIREMENTS,
@@ -275,8 +274,6 @@ async def _auto_backfill_vector_collections() -> None:
         # auto-backfill is disabled.
         from app.modules.bim_hub.models import BIMElement
         from app.modules.bim_hub.vector_adapter import bim_element_vector_adapter
-        from app.modules.boq.models import Position
-        from app.modules.boq.vector_adapter import boq_position_adapter
         from app.modules.documents.models import Document
         from app.modules.documents.vector_adapter import document_vector_adapter
         from app.modules.erp_chat.models import ChatMessage
@@ -290,13 +287,6 @@ async def _auto_backfill_vector_collections() -> None:
         from app.modules.tasks.models import Task
         from app.modules.tasks.vector_adapter import task_vector_adapter
         backfill_targets = [
-            (
-                "BOQ positions",
-                COLLECTION_BOQ,
-                Position,
-                boq_position_adapter,
-                [selectinload(Position.boq)],
-            ),
             ("Documents", COLLECTION_DOCUMENTS, Document, document_vector_adapter, None),
             ("Tasks", COLLECTION_TASKS, Task, task_vector_adapter, None),
             ("Risks", COLLECTION_RISKS, RiskItem, risk_vector_adapter, None),
@@ -1229,14 +1219,12 @@ def create_app() -> FastAPI:
             from app.database import Base, engine
             from app.modules.bim_hub import models as _bim_hub_models  # noqa: F401
             from app.modules.bim_requirements import models as _bim_requirements_models  # noqa: F401
-            from app.modules.boq import models as _boq_models  # noqa: F401
             from app.modules.cde import models as _cde_models  # noqa: F401
             from app.modules.changeorders import models as _changeorders_models  # noqa: F401
             from app.modules.collaboration import models as _collaboration_models  # noqa: F401
             from app.modules.collaboration_locks import models as _collaboration_locks_models  # noqa: F401
             from app.modules.contacts import models as _contacts_models  # noqa: F401
             from app.modules.correspondence import models as _correspondence_models  # noqa: F401
-            from app.modules.costs import models as _costs_models  # noqa: F401
             from app.modules.documents import models as _documents_models  # noqa: F401
             from app.modules.dwg_takeoff import models as _dwg_takeoff_models  # noqa: F401
 
