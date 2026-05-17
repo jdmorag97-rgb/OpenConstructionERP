@@ -128,7 +128,6 @@ async def _strip_orphaned_bim_links(
     # without dragging tasks/schedule/requirements into the import graph
     # at module level (the loader auto-imports modules in dependency order
     # and bim_hub's manifest doesn't list these as hard dependencies).
-    from app.modules.requirements.models import Requirement, RequirementSet
     from app.modules.schedule.models import Activity, Schedule
     from app.modules.tasks.models import Task
 
@@ -186,38 +185,6 @@ async def _strip_orphaned_bim_links(
     except Exception:  # noqa: BLE001
         logger.warning(
             "Orphan cleanup failed for activities (project=%s)",
-            project_id,
-            exc_info=True,
-        )
-
-    # ── Requirements ───────────────────────────────────────────────────
-    try:
-        req_stmt = select(Requirement)
-        if project_id is not None:
-            req_stmt = req_stmt.join(
-                RequirementSet, Requirement.requirement_set_id == RequirementSet.id
-            ).where(RequirementSet.project_id == project_id)
-        req_rows = (await session.execute(req_stmt)).scalars().all()
-        cleaned_reqs = 0
-        for req in req_rows:
-            meta = dict(req.metadata_ or {})
-            ids = meta.get("bim_element_ids")
-            if not isinstance(ids, list):
-                continue
-            kept = [x for x in ids if str(x) not in targets]
-            if len(kept) != len(ids):
-                meta["bim_element_ids"] = kept
-                req.metadata_ = meta
-                cleaned_reqs += 1
-        if cleaned_reqs:
-            logger.info(
-                "Orphan cleanup: stripped %d element id(s) from %d requirement(s)",
-                len(targets),
-                cleaned_reqs,
-            )
-    except Exception:  # noqa: BLE001
-        logger.warning(
-            "Orphan cleanup failed for requirements (project=%s)",
             project_id,
             exc_info=True,
         )
@@ -592,7 +559,6 @@ class BIMHubService:
         # Local imports to avoid import-time cycles between bim_hub and
         # documents / tasks / schedule / requirements.
         from app.modules.documents.models import Document, DocumentBIMLink
-        from app.modules.requirements.models import Requirement, RequirementSet
         from app.modules.schedule.models import Activity, Schedule
         from app.modules.tasks.models import Task
 
@@ -746,50 +712,9 @@ class BIMHubService:
                     if str(eid) in matching:
                         activity_briefs_by_element_id.setdefault(eid, []).append(brief)
 
-        # ── Step 6.5: fetch Requirement rows for this project ──────────
-        # Requirements pin themselves to BIM elements via a JSON array
-        # in ``Requirement.metadata_["bim_element_ids"]`` (no dedicated
-        # column to keep migrations cheap).  We load every requirement
-        # in the project once and filter in Python — same cross-dialect
-        # reasoning as the task and activity loops above.
         requirement_briefs_by_element_id: dict[uuid.UUID, list[dict[str, Any]]] = {
             eid: [] for eid in element_ids
         }
-        if element_ids:
-            element_id_strs = {str(eid) for eid in element_ids}
-            req_stmt = (
-                select(Requirement)
-                .join(
-                    RequirementSet,
-                    Requirement.requirement_set_id == RequirementSet.id,
-                )
-                .where(RequirementSet.project_id == model.project_id)
-            )
-            req_result = await self.session.execute(req_stmt)
-            for req in req_result.scalars().all():
-                raw_meta = req.metadata_ or {}
-                raw_ids = raw_meta.get("bim_element_ids") or []
-                if not isinstance(raw_ids, list) or not raw_ids:
-                    continue
-                req_ids_as_str = {str(x) for x in raw_ids}
-                matching = element_id_strs & req_ids_as_str
-                if not matching:
-                    continue
-                brief = {
-                    "id": req.id,
-                    "requirement_set_id": req.requirement_set_id,
-                    "entity": req.entity or "",
-                    "attribute": req.attribute or "",
-                    "constraint_type": req.constraint_type or "equals",
-                    "constraint_value": req.constraint_value or "",
-                    "unit": req.unit or "",
-                    "category": req.category or "general",
-                    "priority": req.priority or "must",
-                    "status": req.status or "open",
-                }
-                for eid in element_ids:
-                    if str(eid) in matching:
-                        requirement_briefs_by_element_id.setdefault(eid, []).append(brief)
 
         # ── Step 7: load latest ValidationReport for this model ──────────
         # Look up the most recent ``target_type='bim_model'`` report and

@@ -28,7 +28,6 @@ from app.modules.correspondence import models as _correspondence  # noqa: F401
 from app.modules.documents import models as _documents  # noqa: F401
 
 # Enterprise / feature-pack modules
-from app.modules.enterprise_workflows import models as _enterprise_workflows  # noqa: F401
 from app.modules.fieldreports import models as _fieldreports  # noqa: F401
 from app.modules.finance import models as _finance  # noqa: F401
 from app.modules.i18n_foundation import models as _i18n  # noqa: F401
@@ -42,7 +41,6 @@ from app.modules.procurement import models as _procurement  # noqa: F401
 from app.modules.projects import models as _projects  # noqa: F401
 from app.modules.punchlist import models as _punchlist  # noqa: F401
 from app.modules.reporting import models as _reporting  # noqa: F401
-from app.modules.requirements import models as _requirements  # noqa: F401
 from app.modules.rfi import models as _rfi  # noqa: F401
 from app.modules.risk import models as _risk  # noqa: F401
 from app.modules.safety import models as _safety  # noqa: F401

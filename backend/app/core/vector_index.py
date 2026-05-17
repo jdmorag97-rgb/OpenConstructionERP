@@ -79,7 +79,6 @@ COLLECTION_TASKS = "oe_tasks"
 COLLECTION_RISKS = "oe_risks"
 COLLECTION_BIM_ELEMENTS = "oe_bim_elements"
 COLLECTION_CHAT = "oe_chat"
-COLLECTION_REQUIREMENTS = "oe_requirements"
 
 #: Ordered tuple used by :func:`unified_search` to fan out to every
 #: registered collection when the caller doesn't specify ``types``.
@@ -88,7 +87,6 @@ ALL_COLLECTIONS: tuple[str, ...] = (
     COLLECTION_TASKS,
     COLLECTION_RISKS,
     COLLECTION_BIM_ELEMENTS,
-    COLLECTION_REQUIREMENTS,
     COLLECTION_CHAT,
 )
 
@@ -99,7 +97,6 @@ COLLECTION_LABELS: dict[str, str] = {
     COLLECTION_TASKS: "Tasks",
     COLLECTION_RISKS: "Risks",
     COLLECTION_BIM_ELEMENTS: "BIM Elements",
-    COLLECTION_REQUIREMENTS: "Requirements",
     COLLECTION_CHAT: "Chat",
 }
 

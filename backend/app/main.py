@@ -162,7 +162,6 @@ async def _auto_backfill_vector_collections() -> None:
             COLLECTION_BIM_ELEMENTS,
             COLLECTION_CHAT,
             COLLECTION_DOCUMENTS,
-            COLLECTION_REQUIREMENTS,
             COLLECTION_RISKS,
             COLLECTION_TASKS,
             reindex_collection,
@@ -278,10 +277,6 @@ async def _auto_backfill_vector_collections() -> None:
         from app.modules.documents.vector_adapter import document_vector_adapter
         from app.modules.erp_chat.models import ChatMessage
         from app.modules.erp_chat.vector_adapter import chat_message_adapter
-        from app.modules.requirements.models import Requirement
-        from app.modules.requirements.vector_adapter import (
-            requirement_vector_adapter,
-        )
         from app.modules.risk.models import RiskItem
         from app.modules.risk.vector_adapter import risk_vector_adapter
         from app.modules.tasks.models import Task
@@ -296,13 +291,6 @@ async def _auto_backfill_vector_collections() -> None:
                 BIMElement,
                 bim_element_vector_adapter,
                 [selectinload(BIMElement.model)],
-            ),
-            (
-                "Requirements",
-                COLLECTION_REQUIREMENTS,
-                Requirement,
-                requirement_vector_adapter,
-                [selectinload(Requirement.requirement_set)],
             ),
             (
                 "Chat messages",
@@ -1218,7 +1206,6 @@ def create_app() -> FastAPI:
             from app.core.sqlite_migrator import sqlite_auto_migrate
             from app.database import Base, engine
             from app.modules.bim_hub import models as _bim_hub_models  # noqa: F401
-            from app.modules.bim_requirements import models as _bim_requirements_models  # noqa: F401
             from app.modules.cde import models as _cde_models  # noqa: F401
             from app.modules.changeorders import models as _changeorders_models  # noqa: F401
             from app.modules.collaboration import models as _collaboration_models  # noqa: F401
@@ -1229,7 +1216,6 @@ def create_app() -> FastAPI:
             from app.modules.dwg_takeoff import models as _dwg_takeoff_models  # noqa: F401
 
             # Enterprise / feature-pack modules
-            from app.modules.enterprise_workflows import models as _enterprise_workflows_models  # noqa: F401
             from app.modules.erp_chat import models as _erp_chat_models  # noqa: F401
             from app.modules.fieldreports import models as _fieldreports_models  # noqa: F401
             from app.modules.finance import models as _finance_models  # noqa: F401
@@ -1244,7 +1230,6 @@ def create_app() -> FastAPI:
             from app.modules.projects import models as _projects_models  # noqa: F401
             from app.modules.punchlist import models as _punchlist_models  # noqa: F401
             from app.modules.reporting import models as _reporting_models  # noqa: F401
-            from app.modules.requirements import models as _requirements_models  # noqa: F401
             from app.modules.rfi import models as _rfi_models  # noqa: F401
             from app.modules.risk import models as _risk_models  # noqa: F401
             from app.modules.safety import models as _safety_models  # noqa: F401

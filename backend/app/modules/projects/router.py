@@ -738,33 +738,6 @@ async def project_dashboard(
     requirement_sets_count = 0
     requirements_total = 0
     requirements_coverage = 0
-    try:
-        from app.modules.requirements.models import Requirement, RequirementSet
-
-        requirement_sets_count = (
-            await session.execute(select(func.count(RequirementSet.id)).where(RequirementSet.project_id == project_id))
-        ).scalar_one()
-        req_set_ids_result = await session.execute(
-            select(RequirementSet.id).where(RequirementSet.project_id == project_id)
-        )
-        req_set_ids = [row[0] for row in req_set_ids_result.all()]
-        if req_set_ids:
-            requirements_total = (
-                await session.execute(
-                    select(func.count(Requirement.id)).where(Requirement.requirement_set_id.in_(req_set_ids))
-                )
-            ).scalar_one()
-            linked_count = (
-                await session.execute(
-                    select(func.count(Requirement.id)).where(
-                        Requirement.requirement_set_id.in_(req_set_ids),
-                        Requirement.linked_position_id.isnot(None),
-                    )
-                )
-            ).scalar_one()
-            requirements_coverage = round(linked_count / requirements_total * 100) if requirements_total > 0 else 0
-    except Exception:
-        logger.debug("Dashboard: requirements query failed", exc_info=True)
 
     markups_count = 0
     try:
