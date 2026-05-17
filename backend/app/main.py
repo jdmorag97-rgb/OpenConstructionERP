@@ -290,9 +290,6 @@ async def _auto_backfill_vector_collections() -> None:
         from app.modules.risk.vector_adapter import risk_vector_adapter
         from app.modules.tasks.models import Task
         from app.modules.tasks.vector_adapter import task_vector_adapter
-        from app.modules.validation.models import ValidationReport
-        from app.modules.validation.vector_adapter import validation_report_adapter
-
         backfill_targets = [
             (
                 "BOQ positions",
@@ -310,13 +307,6 @@ async def _auto_backfill_vector_collections() -> None:
                 BIMElement,
                 bim_element_vector_adapter,
                 [selectinload(BIMElement.model)],
-            ),
-            (
-                "Validation reports",
-                COLLECTION_VALIDATION,
-                ValidationReport,
-                validation_report_adapter,
-                None,
             ),
             (
                 "Requirements",
