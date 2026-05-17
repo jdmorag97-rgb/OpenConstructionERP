@@ -325,42 +325,10 @@ async def project_dashboard(
     except Exception:
         logger.debug("BOQ query failed", exc_info=True)
 
-    # Fetch 5D cost model budget data
-    try:
-        from app.modules.costmodel.models import BudgetLine
-
-        budget_stmt = select(
-            func.sum(cast(BudgetLine.planned_amount, Float)).label("planned"),
-            func.sum(cast(BudgetLine.actual_amount, Float)).label("actual"),
-        ).where(BudgetLine.project_id == project_id)
-        budget_row = (await session.execute(budget_stmt)).one_or_none()
-        planned_total = float(budget_row.planned or 0) if budget_row else 0.0
-        actual_total = float(budget_row.actual or 0) if budget_row else 0.0
-
-        original = boq_total_value if boq_total_value > 0 else planned_total
-        revised = planned_total if planned_total > 0 else boq_total_value
-        forecast = revised if revised > 0 else original
-
-        budget_section = {
-            "original": str(round(original, 2)),
-            "revised": str(round(revised, 2)),
-            "committed": str(round(actual_total * 0.8, 2)) if actual_total > 0 else "0",
-            "actual": str(round(actual_total, 2)),
-            "forecast": str(round(forecast, 2)),
-            "consumed_pct": str(round(actual_total / revised * 100, 1) if revised > 0 else 0),
-            "warning_level": (
-                "critical"
-                if revised > 0 and actual_total > revised
-                else "warning"
-                if revised > 0 and actual_total > revised * 0.9
-                else "normal"
-            ),
-        }
-    except Exception:
-        if boq_total_value > 0:
-            budget_section["original"] = str(boq_total_value)
-            budget_section["revised"] = str(boq_total_value)
-            budget_section["forecast"] = str(boq_total_value)
+    if boq_total_value > 0:
+        budget_section["original"] = str(boq_total_value)
+        budget_section["revised"] = str(boq_total_value)
+        budget_section["forecast"] = str(boq_total_value)
 
     # ── Schedule ───────────────────────────────────────────────────────────
     schedule_section: dict = {
@@ -891,18 +859,6 @@ async def project_dashboard(
     except Exception:
         logger.debug("Dashboard: photos query failed", exc_info=True)
 
-    measurements_count = 0
-    try:
-        from app.modules.takeoff.models import TakeoffMeasurement
-
-        measurements_count = (
-            await session.execute(
-                select(func.count(TakeoffMeasurement.id)).where(TakeoffMeasurement.project_id == project_id)
-            )
-        ).scalar_one()
-    except Exception:
-        logger.debug("Dashboard: takeoff measurements query failed", exc_info=True)
-
     risk_total = 0
     risk_high_count = 0
     try:
@@ -957,7 +913,6 @@ async def project_dashboard(
         "punch_items": punch_items,
         "field_reports": {"total": field_reports_total, "this_week": field_reports_this_week},
         "photos_count": photos_count,
-        "measurements_count": measurements_count,
         "documents_count": documents_section["total"],
         "schedule_activities": schedule_section["total_activities"],
         "risks": {"total": risk_total, "high": risk_high_count},
@@ -1196,125 +1151,6 @@ async def dashboard_cards(
         )
 
     return result
-
-
-# ── Cross-Project Analytics ─────────────────────────────────────────────
-
-
-@router.get(
-    "/analytics/overview/",
-    summary="Get cross-project analytics",
-    description="Aggregated KPIs across all projects: total budget, actual spend, "
-    "variance, over-budget count, and per-project summary with BOQ counts.",
-)
-async def analytics_overview(
-    session: SessionDep,
-    _user_id: CurrentUserId,
-    payload: CurrentUserPayload,
-) -> dict:
-    """Cross-project analytics — aggregated KPIs across all projects.
-
-    Scoped to the current user's owned projects; admins see every project.
-    """
-    from sqlalchemy import Float, func, select
-    from sqlalchemy.sql.expression import cast
-
-    from app.modules.boq.models import BOQ
-    from app.modules.costmodel.models import BudgetLine
-    from app.modules.projects.models import Project
-
-    is_admin = bool(payload and payload.get("role") == "admin")
-
-    # Per-project summary — owner-scoped for non-admins
-    proj_stmt = select(Project).order_by(Project.name)
-    if not is_admin:
-        proj_stmt = proj_stmt.where(Project.owner_id == _user_id)
-    proj_result = await session.execute(proj_stmt)
-    all_projects = list(proj_result.scalars().all())
-
-    project_ids = [p.id for p in all_projects]
-    proj_count = len(all_projects)
-
-    # Single grouped query for budget rows across the user's projects
-    if project_ids:
-        budget_stmt = (
-            select(
-                BudgetLine.project_id,
-                func.sum(cast(BudgetLine.planned_amount, Float)).label("planned"),
-                func.sum(cast(BudgetLine.actual_amount, Float)).label("actual"),
-            )
-            .where(BudgetLine.project_id.in_(project_ids))
-            .group_by(BudgetLine.project_id)
-        )
-        budget_rows = (await session.execute(budget_stmt)).all()
-    else:
-        budget_rows = []
-
-    budget_map: dict[str, tuple[float, float]] = {
-        str(r.project_id): (float(r.planned or 0), float(r.actual or 0)) for r in budget_rows
-    }
-
-    total_planned = sum(p for p, _ in budget_map.values())
-    total_actual = sum(a for _, a in budget_map.values())
-
-    # Projects with budget
-    projects_with_budget = len(budget_map)
-
-    # Single grouped query for BOQ counts (fixes N+1)
-    if project_ids:
-        boq_stmt = (
-            select(BOQ.project_id, func.count(BOQ.id))
-            .where(BOQ.project_id.in_(project_ids))
-            .group_by(BOQ.project_id)
-        )
-        boq_count_rows = (await session.execute(boq_stmt)).all()
-        boq_counts_map: dict[str, int] = {str(row[0]): int(row[1]) for row in boq_count_rows}
-    else:
-        boq_counts_map = {}
-
-    # Per-project summary
-    projects_data = []
-    for p in all_projects:
-        pid = str(p.id)
-        pname = p.name
-        pregion = p.region
-        pcurrency = p.currency
-
-        # Find budget for this project
-        planned, actual = budget_map.get(pid, (0.0, 0.0))
-        variance = planned - actual if planned > 0 else 0
-        variance_pct = round((variance / planned * 100), 1) if planned > 0 else 0
-
-        # BOQ count from pre-fetched map (single grouped query above)
-        boq_count = boq_counts_map.get(pid, 0)
-
-        projects_data.append(
-            {
-                "id": pid,
-                "name": pname,
-                "region": pregion,
-                "currency": pcurrency,
-                "budget": round(planned, 2),
-                "actual": round(actual, 2),
-                "variance": round(variance, 2),
-                "variance_pct": variance_pct,
-                "boq_count": boq_count,
-                "status": "on_budget" if variance >= 0 else "over_budget",
-            }
-        )
-
-    # Aggregate
-    over_budget_count = sum(1 for p in projects_data if p["status"] == "over_budget")
-
-    return {
-        "total_projects": proj_count,
-        "projects_with_budget": projects_with_budget,
-        "total_planned": round(total_planned, 2),
-        "total_actual": round(total_actual, 2),
-        "total_variance": round(total_planned - total_actual, 2),
-        "over_budget_count": over_budget_count,
-        "projects": projects_data,
-    }
 
 
 # ── WBS CRUD ─────────────────────────────────────────────────────────────
