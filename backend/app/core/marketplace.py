@@ -216,7 +216,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["Middle East", "AED", "Dubai", "Arabic"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -229,7 +229,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["DACH", "EUR", "Berlin", "German"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -242,7 +242,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["North America", "CAD", "Toronto", "English"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -255,7 +255,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["Europe", "EUR", "Barcelona", "Spanish"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -268,7 +268,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["Europe", "EUR", "Paris", "French"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -281,7 +281,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["Asia Pacific", "INR", "Mumbai", "Hindi"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -294,7 +294,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["South America", "BRL", "Sao Paulo", "Portuguese"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -307,7 +307,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["CIS", "RUB", "St. Petersburg", "Russian"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -320,7 +320,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["UK", "GBP", "London", "English"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -333,7 +333,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["North America", "USD", "USA", "English"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     MarketplaceModule(
@@ -346,7 +346,7 @@ MARKETPLACE_MODULES: list[MarketplaceModule] = [
         size_mb=2.0,
         author=_DDC,
         tags=["Asia Pacific", "CNY", "Shanghai", "Chinese"],
-        requires=["oe_catalog"],
+        requires=[],
         price="Free",
     ),
     # ── Vector Indices (11) ──────────────────────────────────────────────

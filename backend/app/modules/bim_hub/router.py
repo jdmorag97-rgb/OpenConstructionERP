@@ -2819,28 +2819,7 @@ async def bim_coverage_summary(
     except (ImportError, AttributeError, SQLAlchemyError):
         elements_with_activities = 0
 
-    # Validated elements — we count distinct rows in the validation
-    # results table whose target_type='bim_element' and project_id matches.
     elements_validated = 0
-    try:
-        from app.modules.validation.models import ValidationReport
-
-        val_stmt = _select(ValidationReport.results).where(
-            ValidationReport.project_id == project_id,
-            ValidationReport.target_type == "bim",
-        )
-        bim_id_set = set()
-        for row in (await session.execute(val_stmt)).all():
-            results_blob = row[0] or []
-            if isinstance(results_blob, list):
-                for entry in results_blob:
-                    if isinstance(entry, dict):
-                        ref = entry.get("element_ref") or entry.get("element_id")
-                        if isinstance(ref, str) and ref:
-                            bim_id_set.add(ref)
-        elements_validated = len(bim_id_set)
-    except (ImportError, AttributeError, SQLAlchemyError):
-        elements_validated = 0
 
     # Costed = subset of boq-linked elements where the linked position
     # has non-zero unit_rate.  Skip if BOQ module is not loaded.

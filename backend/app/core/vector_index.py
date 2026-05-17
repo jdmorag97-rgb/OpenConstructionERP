@@ -35,7 +35,7 @@ Naming conventions
 
 Collection names are short snake_case strings prefixed by the OE
 namespace, e.g. ``oe_boq_positions``, ``oe_documents``, ``oe_tasks``,
-``oe_risks``, ``oe_bim_elements``, ``oe_validation``, ``oe_chat``.  These
+``oe_risks``, ``oe_bim_elements``, ``oe_chat``.  These
 are exposed as constants in :mod:`app.core.vector_index` so each adapter
 imports them rather than hard-coding strings.
 """
@@ -79,7 +79,6 @@ COLLECTION_DOCUMENTS = "oe_documents"
 COLLECTION_TASKS = "oe_tasks"
 COLLECTION_RISKS = "oe_risks"
 COLLECTION_BIM_ELEMENTS = "oe_bim_elements"
-COLLECTION_VALIDATION = "oe_validation"
 COLLECTION_CHAT = "oe_chat"
 COLLECTION_REQUIREMENTS = "oe_requirements"
 
@@ -92,7 +91,6 @@ ALL_COLLECTIONS: tuple[str, ...] = (
     COLLECTION_RISKS,
     COLLECTION_BIM_ELEMENTS,
     COLLECTION_REQUIREMENTS,
-    COLLECTION_VALIDATION,
     COLLECTION_CHAT,
 )
 
@@ -105,7 +103,6 @@ COLLECTION_LABELS: dict[str, str] = {
     COLLECTION_RISKS: "Risks",
     COLLECTION_BIM_ELEMENTS: "BIM Elements",
     COLLECTION_REQUIREMENTS: "Requirements",
-    COLLECTION_VALIDATION: "Validation",
     COLLECTION_CHAT: "Chat",
 }
 

@@ -166,7 +166,6 @@ async def _auto_backfill_vector_collections() -> None:
             COLLECTION_REQUIREMENTS,
             COLLECTION_RISKS,
             COLLECTION_TASKS,
-            COLLECTION_VALIDATION,
             reindex_collection,
         )
         from app.database import async_session_factory
@@ -913,19 +912,7 @@ def create_app() -> FastAPI:
         from app.core.marketplace import get_marketplace_catalog
         from app.database import async_session_factory
 
-        # Query loaded catalog regions so resource_catalog entries show as installed
-        loaded_catalog_regions: set[str] = set()
-        try:
-            async with async_session_factory() as session:
-                from app.modules.catalog.repository import CatalogResourceRepository
-
-                repo = CatalogResourceRepository(session)
-                region_stats = await repo.stats_by_region()
-                loaded_catalog_regions = {r["region"] for r in region_stats if r.get("region")}
-        except Exception:
-            pass  # Graceful degradation: show all as uninstalled
-
-        return get_marketplace_catalog(loaded_catalog_regions=loaded_catalog_regions)
+        return get_marketplace_catalog()
 
     @app.get("/api/demo/catalog", tags=["System"])
     async def demo_catalog() -> list[dict[str, Any]]:
@@ -1240,19 +1227,15 @@ def create_app() -> FastAPI:
             from app.core import audit as _audit_core  # noqa: F401
             from app.core.sqlite_migrator import sqlite_auto_migrate
             from app.database import Base, engine
-            from app.modules.ai import models as _ai_models  # noqa: F401
-            from app.modules.assemblies import models as _asm_models  # noqa: F401
             from app.modules.bim_hub import models as _bim_hub_models  # noqa: F401
             from app.modules.bim_requirements import models as _bim_requirements_models  # noqa: F401
             from app.modules.boq import models as _boq_models  # noqa: F401
-            from app.modules.catalog import models as _catalog_models  # noqa: F401
             from app.modules.cde import models as _cde_models  # noqa: F401
             from app.modules.changeorders import models as _changeorders_models  # noqa: F401
             from app.modules.collaboration import models as _collaboration_models  # noqa: F401
             from app.modules.collaboration_locks import models as _collaboration_locks_models  # noqa: F401
             from app.modules.contacts import models as _contacts_models  # noqa: F401
             from app.modules.correspondence import models as _correspondence_models  # noqa: F401
-            from app.modules.costmodel import models as _cm_models  # noqa: F401
             from app.modules.costs import models as _costs_models  # noqa: F401
             from app.modules.documents import models as _documents_models  # noqa: F401
             from app.modules.dwg_takeoff import models as _dwg_takeoff_models  # noqa: F401
@@ -1279,13 +1262,10 @@ def create_app() -> FastAPI:
             from app.modules.safety import models as _safety_models  # noqa: F401
             from app.modules.schedule import models as _sched_models  # noqa: F401
             from app.modules.submittals import models as _submittals_models  # noqa: F401
-            from app.modules.takeoff import models as _takeoff_models  # noqa: F401
             from app.modules.tasks import models as _tasks_models  # noqa: F401
             from app.modules.teams import models as _teams_models  # noqa: F401
-            from app.modules.tendering import models as _tendering_models  # noqa: F401
             from app.modules.transmittals import models as _transmittals_models  # noqa: F401
             from app.modules.users import models as _users_models  # noqa: F401
-            from app.modules.validation import models as _validation_models  # noqa: F401
 
             # SQLite-only: add missing columns to existing tables before
             # create_all runs. PostgreSQL deployments must use Alembic for
@@ -1323,26 +1303,6 @@ def create_app() -> FastAPI:
             app.include_router(co_router, prefix="/api/v1/variations", tags=["Variations"])
         except Exception:
             logger.debug("Variations alias not available (non-fatal)")
-
-        # costmodel → finance/evm alias (plan §3.3)
-        try:
-            from app.modules.costmodel.router import router as cm_router
-
-            app.include_router(cm_router, prefix="/api/v1/finance/evm", tags=["Finance EVM (alias)"])
-        except Exception:
-            logger.debug("Finance EVM alias not available (non-fatal)")
-
-        # tendering → procurement/tenders alias (plan §3.3)
-        try:
-            from app.modules.tendering.router import router as tend_router
-
-            app.include_router(
-                tend_router,
-                prefix="/api/v1/procurement/tenders",
-                tags=["Procurement Tenders (alias)"],
-            )
-        except Exception:
-            logger.debug("Procurement Tenders alias not available (non-fatal)")
 
         # Register cross-module event handlers (dataflow wiring)
         from app.core.event_handlers import register_event_handlers

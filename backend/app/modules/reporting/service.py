@@ -404,22 +404,6 @@ class ReportingService:
                         exc_info=True,
                     )
 
-                try:
-                    from app.modules.costmodel.service import CostModelService
-
-                    cm_svc = CostModelService(self.session)
-                    cm_dash = await cm_svc.get_dashboard(pid)
-                    if cm_dash.get("cpi"):
-                        cpi = str(cm_dash["cpi"])
-                    if cm_dash.get("spi"):
-                        spi = str(cm_dash["spi"])
-                except Exception:
-                    logger.warning(
-                        "reporting.kpi_recalc costmodel.get_dashboard failed for project_id=%s — cpi/spi will be null",
-                        pid,
-                        exc_info=True,
-                    )
-
                 # ── Safety: open defects & observations ──
                 open_defects = 0
                 open_observations = 0

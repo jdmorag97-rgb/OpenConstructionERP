@@ -846,40 +846,6 @@ class BIMHubService:
         validation_summaries_by_element_id: dict[uuid.UUID, list[dict[str, Any]]] = {
             eid: [] for eid in element_ids
         }
-        if element_ids:
-            from app.modules.validation.repository import ValidationReportRepository
-
-            val_repo = ValidationReportRepository(self.session)
-            latest_report = await val_repo.get_latest_for_target(
-                target_type="bim_model",
-                target_id=str(model_id),
-            )
-            if latest_report is not None:
-                validation_summaries_by_element_id[_VALIDATION_REPORT_SENTINEL] = [
-                    {"report_id": str(latest_report.id)}
-                ]
-                element_id_strs = {str(eid): eid for eid in element_ids}
-                raw_results = latest_report.results or []
-                for entry in raw_results:
-                    if not isinstance(entry, dict):
-                        continue
-                    entry_eid = entry.get("element_id")
-                    if not entry_eid:
-                        continue
-                    key_uuid = element_id_strs.get(str(entry_eid))
-                    if key_uuid is None:
-                        continue
-                    severity = entry.get("severity") or "info"
-                    if severity not in ("error", "warning", "info"):
-                        severity = "info"
-                    validation_summaries_by_element_id.setdefault(key_uuid, []).append(
-                        {
-                            "rule_id": entry.get("rule_id", ""),
-                            "severity": severity,
-                            "message": entry.get("message", ""),
-                        }
-                    )
-
         return (
             elements,
             total,

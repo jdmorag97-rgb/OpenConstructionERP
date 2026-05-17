@@ -1380,7 +1380,7 @@ def test_marketplace_modules(api: API, suite: PlatformTestSuite) -> None:
     d = check(suite, "GET /system/modules (loaded)", r, 200)
     if d:
         modules = d.get("modules", [])
-        expected = ["oe_users", "oe_projects", "oe_boq", "oe_costs", "oe_schedule", "oe_tendering", "oe_ai"]
+        expected = ["oe_users", "oe_projects", "oe_boq", "oe_costs", "oe_schedule"]
         loaded_names = [m.get("name", "") for m in modules]
         for exp in expected:
             suite.add(f"Module '{exp}' loaded", exp in loaded_names)
