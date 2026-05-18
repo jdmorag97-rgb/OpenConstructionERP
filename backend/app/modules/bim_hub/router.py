@@ -69,8 +69,6 @@ from app.modules.bim_hub.schemas import (
     BIMElementGroupUpdate,
     BIMElementListResponse,
     BIMElementResponse,
-    BIMModelBOQLinkAggregate,
-    BIMModelBOQLinksResponse,
     BIMModelCreate,
     BIMModelDiffResponse,
     BIMModelListResponse,
@@ -80,10 +78,6 @@ from app.modules.bim_hub.schemas import (
     BIMQuantityMapListResponse,
     BIMQuantityMapResponse,
     BIMQuantityMapUpdate,
-    BOQElementLinkBrief,
-    BOQElementLinkCreate,
-    BOQElementLinkListResponse,
-    BOQElementLinkResponse,
     QuantityMapApplyRequest,
     QuantityMapApplyResult,
 )
@@ -1893,7 +1887,6 @@ async def list_elements(
     (
         items,
         total,
-        boq_links_by_id,
         doc_links_by_id,
         task_links_by_id,
         activity_briefs_by_id,
@@ -1919,10 +1912,6 @@ async def list_elements(
 
     responses: list[BIMElementResponse] = []
     for elem in items:
-        boq_briefs = [
-            BOQElementLinkBrief.model_validate(b)
-            for b in boq_links_by_id.get(elem.id, [])
-        ]
         doc_briefs = [
             DocumentLinkBrief.model_validate(b)
             for b in doc_links_by_id.get(elem.id, [])
@@ -1954,7 +1943,6 @@ async def list_elements(
         else:
             val_status = "pass"
         resp = BIMElementResponse.model_validate(elem)
-        resp.boq_links = boq_briefs
         resp.linked_documents = doc_briefs
         resp.linked_tasks = task_briefs
         resp.linked_activities = activity_briefs
@@ -2590,7 +2578,7 @@ async def bim_coverage_summary(
     from sqlalchemy import select as _select
     from sqlalchemy.exc import SQLAlchemyError
 
-    from app.modules.bim_hub.models import BIMElement, BIMModel, BOQElementLink
+    from app.modules.bim_hub.models import BIMElement, BIMModel
 
     # Total elements in the project — joined via BIMModel.
     total_stmt = (
@@ -2600,16 +2588,7 @@ async def bim_coverage_summary(
     )
     elements_total = int((await session.execute(total_stmt)).scalar() or 0)
 
-    # Distinct elements that have at least one BOQ link.
-    boq_linked_stmt = (
-        _select(func.count(distinct(BOQElementLink.bim_element_id)))
-        .join(BIMElement, BOQElementLink.bim_element_id == BIMElement.id)
-        .join(BIMModel, BIMElement.model_id == BIMModel.id)
-        .where(BIMModel.project_id == project_id)
-    )
-    elements_linked_to_boq = int(
-        (await session.execute(boq_linked_stmt)).scalar() or 0
-    )
+    elements_linked_to_boq = 0  # BOQ module removed
 
     # Documents — uses DocumentBIMLink if the table exists.  Wrapped in
     # try/except so that a missing/optional module doesn't 500 the call.

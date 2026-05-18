@@ -14,7 +14,7 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.database import Base
-from app.modules.bim_hub.models import BIMElement, BIMModel, BOQElementLink
+from app.modules.bim_hub.models import BIMElement, BIMModel
 from app.modules.bim_hub.repository import BIMElementRepository
 
 
@@ -35,10 +35,6 @@ async def session() -> AsyncSession:
             tables=[
                 BIMModel.__table__,
                 BIMElement.__table__,
-                # BIMElement.boq_links is eagerly loaded (lazy="selectin")
-                # so session.refresh() queries it — the table must exist
-                # even if we never insert rows.
-                BOQElementLink.__table__,
             ],
         )
     Session = async_sessionmaker(engine, expire_on_commit=False)

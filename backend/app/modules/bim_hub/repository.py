@@ -16,7 +16,6 @@ from app.modules.bim_hub.models import (
     BIMModel,
     BIMModelDiff,
     BIMQuantityMap,
-    BOQElementLink,
 )
 
 
@@ -139,7 +138,7 @@ class BIMElementRepository:
         total = (await self.session.execute(count_stmt)).scalar_one()
 
         stmt = (
-            base.options(noload(BIMElement.boq_links))
+            base
             .order_by(BIMElement.created_at)
             .offset(offset)
             .limit(limit)
@@ -263,7 +262,7 @@ class BIMElementRepository:
         total = (await self.session.execute(count_stmt)).scalar_one()
 
         stmt = (
-            base.options(noload(BIMElement.boq_links))
+            base
             .order_by(BIMModel.name, BIMElement.stable_id)
             .offset(offset)
             .limit(limit)
@@ -315,54 +314,6 @@ class BIMElementRepository:
         await self.session.flush()
         await self.session.refresh(element)
         return element
-
-
-class BOQElementLinkRepository:
-    """Data access for BOQElementLink."""
-
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def get(self, link_id: uuid.UUID) -> BOQElementLink | None:
-        """Get a link by ID."""
-        return await self.session.get(BOQElementLink, link_id)
-
-    async def list_by_boq_position(
-        self,
-        boq_position_id: uuid.UUID,
-    ) -> list[BOQElementLink]:
-        """List all links for a BOQ position."""
-        stmt = (
-            select(BOQElementLink)
-            .where(BOQElementLink.boq_position_id == boq_position_id)
-            .order_by(BOQElementLink.created_at)
-        )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
-
-    async def list_by_bim_element(
-        self,
-        bim_element_id: uuid.UUID,
-    ) -> list[BOQElementLink]:
-        """List all links for a BIM element."""
-        stmt = (
-            select(BOQElementLink)
-            .where(BOQElementLink.bim_element_id == bim_element_id)
-            .order_by(BOQElementLink.created_at)
-        )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
-
-    async def create(self, link: BOQElementLink) -> BOQElementLink:
-        """Insert a new BOQ-BIM link."""
-        self.session.add(link)
-        await self.session.flush()
-        return link
-
-    async def delete(self, link_id: uuid.UUID) -> None:
-        """Delete a single link."""
-        stmt = delete(BOQElementLink).where(BOQElementLink.id == link_id)
-        await self.session.execute(stmt)
 
 
 class BIMQuantityMapRepository:

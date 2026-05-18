@@ -120,31 +120,10 @@ class BIMElementBulkImport(BaseModel):
     elements: list[BIMElementCreate] = Field(..., min_length=1, max_length=50000)
 
 
-class BOQElementLinkBrief(BaseModel):
-    """Lightweight BOQ link summary embedded in a BIM element response.
-
-    Contains just enough data for the viewer to render a link badge and
-    navigate to the linked BOQ position without a second round trip.
-    """
-
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    id: UUID
-    boq_position_id: UUID
-    boq_position_ordinal: str | None = None
-    boq_position_description: str | None = None
-    boq_position_quantity: float | None = None
-    boq_position_unit: str | None = None
-    boq_position_unit_rate: float | None = None
-    boq_position_total: float | None = None
-    link_type: str
-    confidence: str | None = None
-
-
 class DocumentLinkBrief(BaseModel):
     """Lightweight Document link summary embedded in a BIM element response.
 
-    Mirrors ``BOQElementLinkBrief`` but lives in ``bim_hub.schemas`` to avoid
+    Lives in ``bim_hub.schemas`` to avoid
     a circular import with ``documents.schemas.DocumentBIMLinkBrief``. The
     two shapes must stay in sync — add fields in both files.
     """
@@ -262,7 +241,6 @@ class BIMElementResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict, validation_alias="metadata_")
     asset_info: dict[str, Any] = Field(default_factory=dict)
     is_tracked_asset: bool = False
-    boq_links: list[BOQElementLinkBrief] = Field(default_factory=list)
     linked_documents: list[DocumentLinkBrief] = Field(default_factory=list)
     linked_tasks: list[TaskBrief] = Field(default_factory=list)
     linked_activities: list[ActivityBrief] = Field(default_factory=list)
@@ -362,78 +340,6 @@ class AssetListResponse(BaseModel):
     total: int = 0
     offset: int = 0
     limit: int = 100
-
-
-# ── BOQElementLink schemas ───────────────────────────────────────────────────
-
-
-class BOQElementLinkCreate(BaseModel):
-    """Create a link between a BOQ position and a BIM element."""
-
-    model_config = ConfigDict(str_strip_whitespace=True)
-
-    boq_position_id: UUID
-    bim_element_id: UUID
-    link_type: str = Field(default="manual", max_length=50)
-    confidence: str | None = Field(default=None, max_length=10)
-    rule_id: str | None = Field(default=None, max_length=100)
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class BOQElementLinkResponse(BaseModel):
-    """BOQ-BIM link returned from the API."""
-
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    id: UUID
-    boq_position_id: UUID
-    bim_element_id: UUID
-    link_type: str
-    confidence: str | None = None
-    rule_id: str | None = None
-    created_by: UUID | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict, validation_alias="metadata_")
-    created_at: datetime
-    updated_at: datetime
-
-
-class BOQElementLinkListResponse(BaseModel):
-    """List of BOQ-BIM links."""
-
-    items: list[BOQElementLinkResponse] = Field(default_factory=list)
-    total: int = 0
-
-
-class BIMModelBOQLinkAggregate(BaseModel):
-    """Aggregated BOQ position + linked BIM element IDs for one model.
-
-    Returned by ``GET /models/{model_id}/boq-links/``. Each entry is a BOQ
-    position linked to at least one element in the model, with the full
-    list of element UUIDs so the viewer can highlight the selection.
-    Cheaper than fetching enriched elements and aggregating client-side
-    when the model has thousands of elements.
-    """
-
-    model_config = ConfigDict(from_attributes=True)
-
-    boq_position_id: UUID
-    boq_id: UUID
-    boq_position_ordinal: str | None = None
-    boq_position_description: str | None = None
-    boq_position_quantity: float | None = None
-    boq_position_unit: str | None = None
-    boq_position_unit_rate: float | None = None
-    boq_position_total: float | None = None
-    link_type: str
-    confidence: str | None = None
-    element_ids: list[UUID] = Field(default_factory=list)
-
-
-class BIMModelBOQLinksResponse(BaseModel):
-    """Aggregated BOQ links for a whole BIM model."""
-
-    items: list[BIMModelBOQLinkAggregate] = Field(default_factory=list)
-    total: int = 0
 
 
 # ── BIMQuantityMap schemas ───────────────────────────────────────────────────

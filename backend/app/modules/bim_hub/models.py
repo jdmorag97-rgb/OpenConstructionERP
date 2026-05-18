@@ -154,52 +154,9 @@ class BIMElement(Base):
 
     # Relationships
     model: Mapped[BIMModel] = relationship(back_populates="elements")
-    boq_links: Mapped[list[BOQElementLink]] = relationship(
-        back_populates="bim_element",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-    )
 
     def __repr__(self) -> str:
         return f"<BIMElement {self.stable_id} ({self.element_type})>"
-
-
-class BOQElementLink(Base):
-    """Link between a BOQ position and a BIM element."""
-
-    __tablename__ = "oe_bim_boq_link"
-    __table_args__ = (
-        UniqueConstraint("boq_position_id", "bim_element_id", name="uq_bim_boq_link_pos_elem"),
-    )
-
-    boq_position_id: Mapped[uuid.UUID] = mapped_column(
-        GUID(),
-        nullable=False,
-        index=True,
-    )
-    bim_element_id: Mapped[uuid.UUID] = mapped_column(
-        GUID(),
-        ForeignKey("oe_bim_element.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    link_type: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
-    confidence: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    rule_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    created_by: Mapped[uuid.UUID | None] = mapped_column(GUID(), nullable=True)
-    metadata_: Mapped[dict] = mapped_column(  # type: ignore[assignment]
-        "metadata",
-        JSON,
-        nullable=False,
-        default=dict,
-        server_default="{}",
-    )
-
-    # Relationships
-    bim_element: Mapped[BIMElement] = relationship(back_populates="boq_links")
-
-    def __repr__(self) -> str:
-        return f"<BOQElementLink pos={self.boq_position_id} elem={self.bim_element_id}>"
 
 
 class BIMQuantityMap(Base):
