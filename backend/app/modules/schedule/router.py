@@ -45,10 +45,8 @@ from app.modules.schedule.schemas import (
     CPMCalculateRequest,
     CriticalPathResponse,
     GanttData,
-    GenerateFromBOQRequest,
     ImportResult,
     LaborCostByPhaseResponse,
-    LinkPositionRequest,
     ProgressUpdateCreate,
     ProgressUpdateEdit,
     ProgressUpdateRequest,
@@ -362,40 +360,7 @@ async def get_gantt_data(
     return await service.get_gantt_data(schedule_id)
 
 
-# ── CPM & BOQ Generation ───────────────────────────────────────────────────
-
-
-@router.post(
-    "/schedules/{schedule_id}/generate-from-boq/",
-    response_model=list[ActivityResponse],
-    status_code=201,
-    summary="Generate activities from BOQ",
-    description="Auto-generate schedule activities from a BOQ. Creates one activity per "
-    "section with cost-proportional durations and sequential FS dependencies.",
-    dependencies=[Depends(RequirePermission("schedule.update"))],
-)
-async def generate_from_boq(
-    schedule_id: uuid.UUID,
-    body: GenerateFromBOQRequest,
-    service: ScheduleService = Depends(_get_service),
-) -> list[ActivityResponse]:
-    """Generate schedule activities from a BOQ.
-
-    Creates one activity per BOQ section with cost-proportional durations
-    and sequential finish-to-start dependencies.
-    """
-    import traceback as _tb
-
-    try:
-        await service.generate_from_boq(schedule_id, body.boq_id, body.total_project_days)
-        # Re-fetch activities to avoid greenlet/lazy-loading issues
-        activities, _ = await service.list_activities_for_schedule(schedule_id, limit=5000)
-        return [_activity_to_response(a) for a in activities]
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error("generate_from_boq failed: %s\n%s", exc, _tb.format_exc())
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+# ── CPM ───────────────────────────────────────────────────────────────────
 
 
 @router.post(
@@ -467,22 +432,6 @@ async def delete_activity(
 ) -> None:
     """Delete an activity and its work orders."""
     await service.delete_activity(activity_id)
-
-
-@router.post(
-    "/activities/{activity_id}/link-position/",
-    response_model=ActivityResponse,
-    summary="Link BOQ position to activity",
-    dependencies=[Depends(RequirePermission("schedule.update"))],
-)
-async def link_boq_position(
-    activity_id: uuid.UUID,
-    body: LinkPositionRequest,
-    service: ScheduleService = Depends(_get_service),
-) -> ActivityResponse:
-    """Link a BOQ position to an activity."""
-    activity = await service.link_boq_position(activity_id, body.boq_position_id)
-    return _activity_to_response(activity)
 
 
 @router.patch(
