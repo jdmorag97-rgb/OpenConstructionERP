@@ -17,7 +17,6 @@ import {
   type BIMRightPanelTab,
 } from '@/stores/useBIMViewerStore';
 import type { Viewpoint as SavedViewpoint } from '@/shared/ui/BIMViewer';
-import BIMLinkedBOQPanel from './BIMLinkedBOQPanel';
 import BIMGroupsPanel from './BIMGroupsPanel';
 import BIMLayersPanel from './BIMLayersPanel';
 import BIMToolsPanel from './BIMToolsPanel';
@@ -31,11 +30,8 @@ interface BIMRightPanelTabsProps {
   onClose: () => void;
   onIsolateGroup: (g: BIMElementGroup) => void;
   onHighlightGroup: (g: BIMElementGroup | null) => void;
-  onLinkGroupToBOQ: (g: BIMElementGroup) => void;
-  onNavigateToBOQ: (positionId: string) => void;
   onDeleteGroup: (g: BIMElementGroup) => void;
   onGroupUpdated: () => void;
-  onHighlightBOQElements: (ids: string[]) => void;
 }
 
 export default function BIMRightPanelTabs({
@@ -46,11 +42,8 @@ export default function BIMRightPanelTabs({
   onClose,
   onIsolateGroup,
   onHighlightGroup,
-  onLinkGroupToBOQ,
-  onNavigateToBOQ,
   onDeleteGroup,
   onGroupUpdated,
-  onHighlightBOQElements,
 }: BIMRightPanelTabsProps) {
   const { t } = useTranslation();
   const activeTab = useBIMViewerStore((s) => s.rightPanelTab);
@@ -162,14 +155,6 @@ export default function BIMRightPanelTabs({
 
       {/* Tab body */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {activeTab === 'properties' && (
-          <BIMLinkedBOQPanel
-            modelId={modelId}
-            elements={elements}
-            onHighlightElements={onHighlightBOQElements}
-            onClose={onClose}
-          />
-        )}
         {activeTab === 'layers' && <BIMLayersPanel elements={elements} />}
         {activeTab === 'tools' && (
           <BIMToolsPanel
@@ -194,8 +179,6 @@ export default function BIMRightPanelTabs({
                 projectId={projectId}
                 onIsolateGroup={onIsolateGroup}
                 onHighlightGroup={onHighlightGroup}
-                onLinkToBOQ={onLinkGroupToBOQ}
-                onNavigateToBOQ={onNavigateToBOQ}
                 onDeleteGroup={onDeleteGroup}
                 onGroupUpdated={onGroupUpdated}
               />

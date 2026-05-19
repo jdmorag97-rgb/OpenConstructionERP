@@ -8,20 +8,11 @@ import {
   LayoutDashboard,
   FolderOpen,
   FolderPlus,
-  Table2,
   Database,
-  Boxes,
   CalendarDays,
-  TrendingUp,
   FileText,
-  FilePlus2,
-  FileBarChart,
-  ShieldCheck,
-  Leaf,
   Package,
   Settings,
-  Sparkles,
-  Download,
   CornerDownLeft,
   Users,
   HelpCircle,
@@ -32,14 +23,13 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { projectsApi, type Project } from '@/features/projects/api';
-import { boqApi, type BOQ } from '@/features/boq/api';
 import { apiGet } from '@/shared/lib/api';
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
 interface SearchResult {
   id: string;
-  type: 'page' | 'project' | 'boq' | 'recent' | 'global';
+  type: 'page' | 'project' | 'recent' | 'global';
   labelKey?: string;
   label?: string;
   description?: string;
@@ -59,7 +49,6 @@ interface GlobalSearchResult {
 
 /** Map module names from global search API to Lucide icons. */
 const GLOBAL_SEARCH_ICONS: Record<string, LucideIcon> = {
-  boq: Table2,
   contacts: Users,
   documents: FileText,
   rfi: HelpCircle,
@@ -80,23 +69,11 @@ interface CommandPaletteProps {
 const PAGE_RESULTS: SearchResult[] = [
   { id: 'page-dashboard', type: 'page', labelKey: 'nav.dashboard', icon: LayoutDashboard, path: '/' },
   { id: 'page-projects', type: 'page', labelKey: 'projects.title', icon: FolderOpen, path: '/projects' },
-  { id: 'page-boq', type: 'page', labelKey: 'boq.title', icon: Table2, path: '/boq' },
-  { id: 'page-costs', type: 'page', labelKey: 'costs.title', icon: Database, path: '/costs' },
-  { id: 'page-catalog', type: 'page', labelKey: 'catalog.title', icon: Boxes, path: '/catalog' },
-  { id: 'page-ai-estimate', type: 'page', labelKey: 'nav.ai_estimate', icon: Sparkles, path: '/ai-estimate' },
   { id: 'page-schedule', type: 'page', labelKey: 'schedule.title', icon: CalendarDays, path: '/schedule' },
-  { id: 'page-5d', type: 'page', labelKey: 'nav.5d_cost_model', icon: TrendingUp, path: '/5d' },
-  { id: 'page-tendering', type: 'page', labelKey: 'tendering.title', icon: FileText, path: '/tendering' },
-  { id: 'page-reports', type: 'page', labelKey: 'nav.reports', icon: FileBarChart, path: '/reports' },
-  { id: 'page-validation', type: 'page', labelKey: 'validation.title', icon: ShieldCheck, path: '/validation' },
-  { id: 'page-sustainability', type: 'page', labelKey: 'nav.sustainability', icon: Leaf, path: '/sustainability' },
   { id: 'page-modules', type: 'page', labelKey: 'modules.title', icon: Package, path: '/modules' },
   { id: 'page-settings', type: 'page', labelKey: 'nav.settings', icon: Settings, path: '/settings' },
   // Quick actions
   { id: 'action-new-project', type: 'page', labelKey: 'command_palette.action_new_project', description: 'Ctrl+N', icon: FolderPlus, path: '/projects/new' },
-  { id: 'action-new-boq', type: 'page', labelKey: 'command_palette.action_new_boq', description: 'Ctrl+Shift+N', icon: FilePlus2, path: '/boq/new' },
-  { id: 'action-validate', type: 'page', labelKey: 'command_palette.action_run_validation', description: 'Ctrl+Shift+V', icon: ShieldCheck, path: '/validation' },
-  { id: 'action-import-db', type: 'page', labelKey: 'command_palette.action_import_database', icon: Download, path: '/costs/import' },
 ];
 
 /* ── Recent items (stored in localStorage) ─────────────────────────────── */
@@ -108,7 +85,7 @@ interface RecentEntry {
   id: string;
   label: string;
   path: string;
-  type: 'page' | 'project' | 'boq';
+  type: 'page' | 'project';
 }
 
 function loadRecent(): RecentEntry[] {
@@ -147,8 +124,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
-  const [boqs, setBoqs] = useState<(BOQ & { projectName?: string })[]>([]);
-  const [boqsLoaded, setBoqsLoaded] = useState(false);
   const [globalResults, setGlobalResults] = useState<GlobalSearchResult[]>([]);
   const [globalSearchLoading, setGlobalSearchLoading] = useState(false);
   const globalSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -207,35 +182,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     };
   }, [open, projectsLoaded]);
 
-  // Load BOQs for the first few projects when palette opens and projects are loaded
-  useEffect(() => {
-    if (!open || !projectsLoaded || boqsLoaded || projects.length === 0) return;
-
-    let cancelled = false;
-    const projectSlice = projects.slice(0, 5);
-    Promise.all(
-      projectSlice.map((p) =>
-        boqApi.list(p.id).then((list) =>
-          list.map((b) => ({ ...b, projectName: p.name })),
-        ).catch(() => [] as (BOQ & { projectName?: string })[]),
-      ),
-    ).then((results) => {
-      if (!cancelled) {
-        // Flatten and take top 5 most recent
-        const allBoqs = results
-          .flat()
-          .sort((a, b) => new Date(b.updated_at ?? b.created_at).getTime() - new Date(a.updated_at ?? a.created_at).getTime())
-          .slice(0, 5);
-        setBoqs(allBoqs);
-        setBoqsLoaded(true);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, projectsLoaded, boqsLoaded, projects]);
-
   // Reset state when opening
   useEffect(() => {
     if (open) {
@@ -263,7 +209,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             id: `recent-${r.id}`,
             type: 'recent' as const,
             label: r.label,
-            icon: r.type === 'project' ? FolderOpen : r.type === 'boq' ? Table2 : LayoutDashboard,
+            icon: r.type === 'project' ? FolderOpen : LayoutDashboard,
             path: r.path,
           })),
         });
@@ -287,23 +233,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
               description: p.description,
               icon: FolderOpen,
               path: `/projects/${p.id}`,
-            }),
-          ),
-        });
-      }
-
-      // Show recent BOQs (top 5 from API)
-      if (boqs.length > 0) {
-        groups.push({
-          title: t('command_palette.boqs', { defaultValue: 'Bills of Quantities' }),
-          items: boqs.slice(0, 5).map(
-            (b): SearchResult => ({
-              id: `boq-${b.id}`,
-              type: 'boq',
-              label: b.name,
-              description: b.projectName,
-              icon: Table2,
-              path: `/boq/${b.id}`,
             }),
           ),
         });
@@ -351,33 +280,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       });
     }
 
-    // Filter BOQs
-    const matchingBoqs = boqs
-      .filter(
-        (b) =>
-          b.name.toLowerCase().includes(lowerQuery) ||
-          b.description?.toLowerCase().includes(lowerQuery) ||
-          b.projectName?.toLowerCase().includes(lowerQuery),
-      )
-      .slice(0, 5)
-      .map(
-        (b): SearchResult => ({
-          id: `boq-${b.id}`,
-          type: 'boq',
-          label: b.name,
-          description: b.projectName,
-          icon: Table2,
-          path: `/boq/${b.id}`,
-        }),
-      );
-
-    if (matchingBoqs.length > 0) {
-      groups.push({
-        title: t('command_palette.boqs', { defaultValue: 'Bills of Quantities' }),
-        items: matchingBoqs,
-      });
-    }
-
     // Global search results (from backend API)
     if (globalResults.length > 0) {
       // Group by module for cleaner display
@@ -406,7 +308,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     }
 
     return groups;
-  }, [query, projects, boqs, globalResults, t]);
+  }, [query, projects, globalResults, t]);
 
   // Flat list for keyboard navigation
   const flatResults = useMemo(() => results.flatMap((g) => g.items), [results]);
@@ -424,7 +326,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         id: result.id.replace(/^recent-/, ''),
         label,
         path: result.path,
-        type: result.type === 'project' ? 'project' : result.type === 'boq' ? 'boq' : result.type === 'global' ? 'page' : 'page',
+        type: result.type === 'project' ? 'project' : 'page',
       });
       navigate(result.path);
       onClose();

@@ -14,25 +14,9 @@ import { apiGet, apiPost, apiPatch, apiDelete } from '@/shared/lib/api';
 import { useToastStore } from '@/stores/useToastStore';
 import { useProjectContextStore } from '@/stores/useProjectContextStore';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
-import { type BOQWithPositions } from '../boq/api';
 import { CreateProjectModal } from './CreateProjectPage';
 
-interface BOQBasic {
-  id: string;
-  project_id: string;
-  name: string;
-  status: string;
-  created_at: string;
-}
-
-interface ProjectBOQStats {
-  projectId: string;
-  boqCount: number;
-  totalValue: number;
-  hasError?: boolean;
-}
-
-type SortOption = 'name_asc' | 'newest' | 'oldest' | 'value';
+type SortOption = 'name_asc' | 'newest' | 'oldest';
 type StatusFilter = 'all' | 'active' | 'archived';
 
 const ITEMS_PER_PAGE = 12;
@@ -54,10 +38,6 @@ function getRegionAvatarClass(region?: string): string {
   return 'bg-oe-blue-subtle text-oe-blue';
 }
 
-const currencyFmt = new Intl.NumberFormat(getIntlLocale(), {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
 
 export function ProjectsPage() {
   const { t } = useTranslation();
@@ -101,79 +81,6 @@ export function ProjectsPage() {
     queryFn: () => apiGet<Record<string, string[]>>('/v1/documents/file-types-by-project/'),
     staleTime: 60_000,
   });
-
-  /* Fetch BOQ stats for all projects (count + total value) — single request + parallel detail fetches */
-  const { data: boqStats, error: boqStatsError } = useQuery({
-    queryKey: ['projects-boq-stats', projects],
-    queryFn: async () => {
-      if (!projects || projects.length === 0) return [];
-
-      // Fetch BOQs per project (endpoint requires project_id)
-      // Track per-project errors so we can surface degraded loads to the UI.
-      const perProject = await Promise.all(
-        projects.map(async (p) => {
-          try {
-            const boqs = await apiGet<BOQBasic[]>(`/v1/boq/boqs/?project_id=${p.id}`);
-            return { projectId: p.id, boqs, failed: false };
-          } catch (err) {
-            if (import.meta.env.DEV) console.warn(`Failed to fetch BOQs for project ${p.id}:`, err);
-            return { projectId: p.id, boqs: [] as BOQBasic[], failed: true };
-          }
-        }),
-      );
-      const failedProjectIds = new Set(
-        perProject.filter((pp) => pp.failed).map((pp) => pp.projectId),
-      );
-      const allBoqs = perProject.flatMap((pp) => pp.boqs);
-
-      // Group BOQs by project_id
-      const boqsByProject = new Map<string, BOQBasic[]>();
-      for (const b of allBoqs) {
-        const list = boqsByProject.get(b.project_id) ?? [];
-        list.push(b);
-        boqsByProject.set(b.project_id, list);
-      }
-
-      // Fetch grand_total for each BOQ in parallel
-      const detailPromises = allBoqs.map(async (b) => {
-        try {
-          const full = await apiGet<BOQWithPositions>(`/v1/boq/boqs/${b.id}`);
-          return { boqId: b.id, projectId: b.project_id, grandTotal: full.grand_total, failed: false };
-        } catch (err) {
-          if (import.meta.env.DEV) console.warn(`Failed to fetch BOQ ${b.id} detail:`, err);
-          return { boqId: b.id, projectId: b.project_id, grandTotal: 0, failed: true };
-        }
-      });
-      const details = await Promise.all(detailPromises);
-
-      // Aggregate totals per project
-      const totalsByProject = new Map<string, number>();
-      for (const d of details) {
-        totalsByProject.set(d.projectId, (totalsByProject.get(d.projectId) ?? 0) + d.grandTotal);
-        if (d.failed) failedProjectIds.add(d.projectId);
-      }
-
-      return projects.map((p) => ({
-        projectId: p.id,
-        boqCount: boqsByProject.get(p.id)?.length ?? 0,
-        totalValue: totalsByProject.get(p.id) ?? 0,
-        hasError: failedProjectIds.has(p.id),
-      }));
-    },
-    enabled: !!projects && projects.length > 0,
-  });
-
-  // Show a persistent warning if BOQ stats failed to load at the top level
-  useEffect(() => {
-    if (boqStatsError) {
-      if (import.meta.env.DEV) console.error('BOQ stats query failed:', boqStatsError);
-    }
-  }, [boqStatsError]);
-
-  const boqStatsMap = useMemo(() => {
-    if (!boqStats) return new Map<string, ProjectBOQStats>();
-    return new Map(boqStats.map((s) => [s.projectId, s]));
-  }, [boqStats]);
 
   /* ── Filter + Sort ────────────────────────────────────────────────── */
 
@@ -227,18 +134,13 @@ export function ProjectsPage() {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'oldest':
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'value': {
-          const aVal = boqStatsMap.get(a.id)?.totalValue ?? 0;
-          const bVal = boqStatsMap.get(b.id)?.totalValue ?? 0;
-          return bVal - aVal;
-        }
         default:
           return 0;
       }
     });
 
     return list;
-  }, [projects, searchQuery, statusFilter, regionFilter, sortOption, boqStatsMap, pinnedIds]);
+  }, [projects, searchQuery, statusFilter, regionFilter, sortOption, pinnedIds]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -259,10 +161,8 @@ export function ProjectsPage() {
     const totalProjects = projects.length;
     const activeProjects = projects.filter((p) => p.status === 'active').length;
     const archivedProjects = projects.filter((p) => p.status === 'archived').length;
-    const totalBoqs = boqStats ? boqStats.reduce((s, b) => s + b.boqCount, 0) : 0;
-    const totalValue = boqStats ? boqStats.reduce((s, b) => s + b.totalValue, 0) : 0;
-    return { totalProjects, activeProjects, archivedProjects, totalBoqs, totalValue };
-  }, [projects, boqStats]);
+    return { totalProjects, activeProjects, archivedProjects };
+  }, [projects]);
 
   /* ── Sort labels ──────────────────────────────────────────────────── */
 
@@ -270,7 +170,6 @@ export function ProjectsPage() {
     { value: 'name_asc', label: t('projects.sort_name', { defaultValue: 'Name A-Z' }) },
     { value: 'newest', label: t('projects.sort_newest', { defaultValue: 'Newest' }) },
     { value: 'oldest', label: t('projects.sort_oldest', { defaultValue: 'Oldest' }) },
-    { value: 'value', label: t('projects.sort_value', { defaultValue: 'Value' }) },
   ];
 
   return (
@@ -300,7 +199,7 @@ export function ProjectsPage() {
 
       {/* Stats cards */}
       {stats && projects && projects.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 gap-3 mb-6">
           <div className="rounded-xl bg-surface-elevated border border-border-light p-3">
             <div className="text-2xs font-medium text-content-tertiary uppercase tracking-wider">
               {t('projects.stats_total', { defaultValue: 'Total Projects' })}
@@ -325,32 +224,6 @@ export function ProjectsPage() {
                   </Badge>
                 )}
               </div>
-            </div>
-          </div>
-          <div className="rounded-xl bg-surface-elevated border border-border-light p-3">
-            <div className="text-2xs font-medium text-content-tertiary uppercase tracking-wider">
-              {t('projects.stats_boqs', { defaultValue: 'Total BOQs' })}
-            </div>
-            <div className="mt-1 text-xl font-bold text-content-primary tabular-nums">
-              {boqStats ? stats.totalBoqs.toLocaleString() : (
-                <span className="inline-block h-5 w-10 animate-pulse rounded bg-surface-tertiary" />
-              )}
-            </div>
-          </div>
-          <div className="rounded-xl bg-surface-elevated border border-border-light p-3 sm:col-span-2">
-            <div className="text-2xs font-medium text-content-tertiary uppercase tracking-wider">
-              {t('projects.stats_value', { defaultValue: 'Total Value' })}
-            </div>
-            <div className="mt-1 text-xl font-bold text-content-primary tabular-nums">
-              {boqStats ? (
-                stats.totalValue >= 1_000_000
-                  ? `${(stats.totalValue / 1_000_000).toFixed(1)}M`
-                  : stats.totalValue >= 1_000
-                    ? `${(stats.totalValue / 1_000).toFixed(0)}K`
-                    : currencyFmt.format(stats.totalValue)
-              ) : (
-                <span className="inline-block h-5 w-16 animate-pulse rounded bg-surface-tertiary" />
-              )}
             </div>
           </div>
         </div>
@@ -473,7 +346,6 @@ export function ProjectsPage() {
               <ProjectCard
                 key={project.id}
                 project={project}
-                boqStats={boqStatsMap.get(project.id)}
                 fileTypes={fileTypesByProject?.[project.id] ?? []}
                 style={{ animationDelay: `${50 + i * 30}ms` }}
                 onDeleted={() => setStatusFilter('active')}
@@ -569,13 +441,11 @@ export function ProjectsPage() {
 
 function ProjectCard({
   project,
-  boqStats,
   fileTypes,
   style,
   onDeleted,
 }: {
   project: Project;
-  boqStats?: ProjectBOQStats;
   /** Uploaded file extensions for this project (e.g. ['rvt','dwg','pdf']). */
   fileTypes?: string[];
   style?: React.CSSProperties;
@@ -833,13 +703,6 @@ function ProjectCard({
         </div>
       </div>
       <div className="border-t border-border-light px-5 py-2.5">
-        {boqStats && boqStats.boqCount > 0 && boqStats.totalValue > 0 && (
-          <div className="mb-1">
-            <span className="text-base font-bold text-content-primary tabular-nums">
-              {project.currency} {currencyFmt.format(boqStats.totalValue)}
-            </span>
-          </div>
-        )}
         {weatherEnabled && cardCoords && (
           <div className="mb-1.5" onClick={(e) => e.stopPropagation()}>
             <ProjectWeather
@@ -852,14 +715,6 @@ function ProjectCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 text-2xs text-content-tertiary">
             <span>{new Date(project.created_at).toLocaleDateString(getIntlLocale())}</span>
-            {boqStats && boqStats.boqCount > 0 && (
-              <span>
-                {t('projects.boq_count', {
-                  defaultValue: '{{count}} BOQs',
-                  count: boqStats.boqCount,
-                })}
-              </span>
-            )}
           </div>
           <ArrowRight size={12} className="text-content-tertiary" />
         </div>

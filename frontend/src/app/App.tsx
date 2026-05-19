@@ -4,12 +4,8 @@ import { AppLayout } from './layout';
 import { DashboardPage } from '@/features/dashboard';
 import { LoginPage, RegisterPage, ForgotPasswordPage } from '@/features/auth';
 import { ProjectsPage, CreateProjectPage, ProjectDetailPage } from '@/features/projects';
-import { BOQListPage, CreateBOQPage, TemplatesPage } from '@/features/boq';
-import { CostsPage, ImportDatabasePage } from '@/features/costs';
 import { OnboardingWizard } from '@/features/onboarding';
-import { AssembliesPage, AssemblyEditorPage, CreateAssemblyPage } from '@/features/assemblies';
 import { ValidationPage } from '@/features/validation';
-import { QuantitiesPage } from '@/features/quantities';
 import { ModulesPage, ModuleDeveloperGuide } from '@/features/modules';
 import { useModuleRouteElements } from '@/modules/ModuleRoutes';
 import { SettingsPage } from '@/features/settings';
@@ -30,12 +26,6 @@ import { getLanguageByCode } from './i18n';
 import { initErrorLogger } from '@/shared/lib/errorLogger';
 
 // Lazy-loaded heavy pages — code-split into separate chunks
-const BOQEditorPage = lazy(() =>
-  import('@/features/boq/BOQEditorPage').then((m) => ({ default: m.BOQEditorPage }))
-);
-const CostModelPage = lazy(() =>
-  import('@/features/costmodel/CostModelPage').then((m) => ({ default: m.CostModelPage }))
-);
 const SchedulePage = lazy(() =>
   import('@/features/schedule/SchedulePage').then((m) => ({ default: m.SchedulePage }))
 );
@@ -44,12 +34,6 @@ const CadDataExplorerPage = lazy(() =>
 );
 const TenderingPage = lazy(() =>
   import('@/features/tendering/TenderingPage').then((m) => ({ default: m.TenderingPage }))
-);
-const ReportsPage = lazy(() =>
-  import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage }))
-);
-const CatalogPage = lazy(() =>
-  import('@/features/catalog/CatalogPage').then((m) => ({ default: m.CatalogPage }))
 );
 const AdvisorPage = lazy(() =>
   import('@/features/ai/AdvisorPage').then((m) => ({ default: m.AdvisorPage }))
@@ -72,10 +56,6 @@ const DocumentsPage = lazy(() =>
 const PhotoGalleryPage = lazy(() =>
   import('@/features/documents/PhotoGalleryPage').then((m) => ({ default: m.PhotoGalleryPage }))
 );
-// RequirementsPage merged into /bim/rules — route removed, redirect added
-// const RequirementsPage = lazy(() =>
-//   import('@/features/requirements/RequirementsPage').then((m) => ({ default: m.RequirementsPage }))
-// );
 const MarkupsPage = lazy(() =>
   import('@/features/markups/MarkupsPage').then((m) => ({ default: m.MarkupsPage }))
 );
@@ -135,9 +115,6 @@ const AssetsPage = lazy(() =>
 );
 const BIMPage = lazy(() =>
   import('@/features/bim/BIMPage').then((m) => ({ default: m.BIMPage }))
-);
-const BIMQuantityRulesPage = lazy(() =>
-  import('@/features/bim/BIMQuantityRulesPage').then((m) => ({ default: m.BIMQuantityRulesPage }))
 );
 const UserManagementPage = lazy(() =>
   import('@/features/users/UserManagementPage').then((m) => ({ default: m.UserManagementPage }))
@@ -354,7 +331,6 @@ export default function App() {
         <Route path="/cad-takeoff" element={<Navigate to="/data-explorer" replace />} />
         <Route path="/data-explorer" element={<P title="Data Explorer"><CadDataExplorerPage /></P>} />
         <Route path="/bim" element={<P title="BIM Viewer"><BIMPage /></P>} />
-        <Route path="/bim/rules" element={<P title="BIM Rules"><BIMQuantityRulesPage /></P>} />
         <Route path="/assets" element={<P title="Asset Register"><AssetsPage /></P>} />
         <Route path="/bim/:modelId" element={<P title="BIM Viewer"><BIMPage /></P>} />
         <Route path="/projects/:projectId/bim" element={<P title="BIM Viewer"><BIMPage /></P>} />
@@ -363,33 +339,15 @@ export default function App() {
         <Route path="/projects" element={<P title="Projects"><ProjectsPage /></P>} />
         <Route path="/projects/new" element={<P title="New Project"><CreateProjectPage /></P>} />
         <Route path="/projects/:projectId" element={<P title="Project"><ProjectDetailPage /></P>} />
-        <Route path="/projects/:projectId/boq/new" element={<P title="New BOQ"><CreateBOQPage /></P>} />
-
-        <Route path="/boq" element={<P title="Bill of Quantities"><BOQListPage /></P>} />
-        <Route path="/boq/:boqId" element={<P title="BOQ Editor"><BOQEditorPage /></P>} />
-        <Route path="/templates" element={<P title="BOQ Templates"><TemplatesPage /></P>} />
-
-        <Route path="/costs" element={<P title="Cost Database"><CostsPage /></P>} />
-        <Route path="/costs/import" element={<P title="Import Cost Database"><ImportDatabasePage /></P>} />
-
-        <Route path="/catalog" element={<P title="Resource Catalog"><CatalogPage /></P>} />
-
-        <Route path="/assemblies" element={<P title="Assemblies"><AssembliesPage /></P>} />
-        <Route path="/assemblies/new" element={<P title="New Assembly"><CreateAssemblyPage /></P>} />
-        <Route path="/assemblies/:assemblyId" element={<P title="Assembly Editor"><AssemblyEditorPage /></P>} />
 
         <Route path="/validation" element={<P title="Validation"><ValidationPage /></P>} />
 
-        <Route path="/quantities" element={<P title="Quantity Takeoff"><QuantitiesPage /></P>} />
         <Route path="/dwg-takeoff" element={<P title="DWG Takeoff"><DwgTakeoffPage /></P>} />
 
         <Route path="/schedule" element={<P title="4D Schedule"><SchedulePage /></P>} />
 
-        <Route path="/5d" element={<P title="5D Cost Model"><CostModelPage /></P>} />
-
         <Route path="/analytics" element={<P title="Analytics"><AnalyticsPage /></P>} />
 
-        <Route path="/reports" element={<P title="Reports"><ReportsPage /></P>} />
         <Route path="/reporting" element={<P title="Reporting Dashboards"><ReportingPage /></P>} />
 
         <Route path="/tendering" element={<P title="Tendering"><TenderingPage /></P>} />
@@ -400,8 +358,8 @@ export default function App() {
 
         <Route path="/risks" element={<P title="Risk Register"><RiskRegisterPage /></P>} />
 
-        {/* Requirements merged into BIM Rules page */}
-        <Route path="/requirements" element={<Navigate to="/bim/rules" replace />} />
+        {/* requirements feature eliminated — redirect to /bim */}
+        <Route path="/requirements" element={<Navigate to="/bim" replace />} />
 
         <Route path="/markups" element={<P title="Markups"><MarkupsPage /></P>} />
         <Route path="/punchlist" element={<P title="Punch List"><PunchListPage /></P>} />
@@ -452,7 +410,6 @@ export default function App() {
         <Route path="/change-orders" element={<Navigate to="/changeorders" replace />} />
         <Route path="/punch-list" element={<Navigate to="/punchlist" replace />} />
         <Route path="/variations" element={<Navigate to="/changeorders" replace />} />
-        <Route path="/estimates" element={<Navigate to="/boq" replace />} />
         <Route path="/profile" element={<Navigate to="/settings" replace />} />
         <Route path="/notifications" element={<Navigate to="/settings" replace />} />
 

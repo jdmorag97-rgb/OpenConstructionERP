@@ -65,7 +65,6 @@ import ElementAssetCard from './ElementAssetCard';
 import { useBIMViewerStore } from '@/stores/useBIMViewerStore';
 import { BIMConverterStatusBanner } from './BIMConverterStatusBanner';
 import { InstallConverterPrompt } from './InstallConverterPrompt';
-import AddToBOQModal from './AddToBOQModal';
 import SaveGroupModal from './SaveGroupModal';
 import CreateTaskFromBIMModal from './CreateTaskFromBIMModal';
 import LinkDocumentToBIMModal from './LinkDocumentToBIMModal';
@@ -1463,10 +1462,6 @@ export function BIMPage() {
   const showBoundingBoxes = false;
   const [isolatedIds, setIsolatedIds] = useState<string[] | null>(null);
   const [meshMatchRatio, setMeshMatchRatio] = useState<number | null>(null);
-  /** Elements queued for linking via the AddToBOQ modal. Single element
-   *  when the user clicks an element; multiple elements when "quick
-   *  takeoff" on a filtered category. */
-  const [linkCandidates, setLinkCandidates] = useState<BIMElementData[] | null>(null);
   /** Save-as-group modal state — captures the current filter snapshot. */
   const [saveGroupState, setSaveGroupState] = useState<{
     filterCriteria: BIMGroupFilterCriteria;
@@ -1892,11 +1887,6 @@ export function BIMPage() {
     setSelectedElementId(elementId);
   }, []);
 
-  // Open the AddToBOQ modal for one or more selected elements (bulk link).
-  const handleAddToBOQ = useCallback((elements: BIMElementData[]) => {
-    if (elements.length > 0) setLinkCandidates(elements);
-  }, []);
-
   // Cross-module navigation handlers — fired when the user clicks a row
   // in the Linked Documents / Tasks / Activities sections of the
   // selected-element panel.  Each one takes them to the relevant module
@@ -1937,36 +1927,10 @@ export function BIMPage() {
     setLinkRequirementFor([element]);
   }, []);
   const handleOpenRequirement = useCallback(
-    (requirementId: string) => {
-      navigate(`/bim/rules?id=${encodeURIComponent(requirementId)}`);
+    (_requirementId: string) => {
+      navigate(`/bim`);
     },
     [navigate],
-  );
-
-  // Link a saved group to a BOQ position — looks up every member element
-  // by id from the current `elements` list and opens AddToBOQModal with
-  // the resolved subset.  If some member ids aren't in the loaded element
-  // list (e.g. the group references elements from a different model that
-  // happen to share an id), they're silently dropped.
-  const handleLinkGroupToBOQ = useCallback(
-    (group: BIMElementGroup) => {
-      const memberIds = new Set(
-        Array.isArray(group.member_element_ids) ? group.member_element_ids : [],
-      );
-      const subset = elements.filter((el) => memberIds.has(el.id));
-      if (subset.length === 0) {
-        addToast({
-          type: 'info',
-          title: t('bim.group_empty_title', { defaultValue: 'Empty group' }),
-          message: t('bim.group_empty_msg', {
-            defaultValue: 'This group has no members in the current model.',
-          }),
-        });
-        return;
-      }
-      setLinkCandidates(subset);
-    },
-    [elements, addToast, t],
   );
 
   // Delete a saved group via the backend, refresh the list.
@@ -2058,13 +2022,6 @@ export function BIMPage() {
     [setBIMSelection],
   );
 
-  // Navigate to the BOQ editor, optionally focusing a specific position.
-  const handleNavigateToBOQ = useCallback(
-    (positionId: string) => {
-      navigate(`/boq?position=${encodeURIComponent(positionId)}`);
-    },
-    [navigate],
-  );
 
   // Invalidate groups query after a rename or color change.
   const handleGroupUpdated = useCallback(() => {
@@ -2073,16 +2030,10 @@ export function BIMPage() {
     });
   }, [queryClient, projectId, activeModelId]);
 
-  // Remove a BIM↔BOQ link — fires from the properties panel's unlink button.
   const handleUnlinkBOQ = useCallback(
     async (linkId: string) => {
       try {
         await deleteLink(linkId);
-        addToast({
-          type: 'success',
-          title: t('bim.link_removed_title', { defaultValue: 'Unlinked' }),
-          message: t('bim.link_removed', { defaultValue: 'BIM ↔ BOQ link removed' }),
-        });
         queryClient.invalidateQueries({ queryKey: ['bim-elements', activeModelId] });
       } catch (err) {
         addToast({
@@ -2094,28 +2045,6 @@ export function BIMPage() {
     },
     [activeModelId, addToast, queryClient, t],
   );
-
-  // Kick a "quick takeoff" from the currently-applied filter — aggregate all
-  // elements that match the active filter predicate and open AddToBOQ with
-  // the full subset so the user can generate one BOQ position from e.g.
-  // "all walls on level 1".
-  const handleQuickTakeoff = useCallback(() => {
-    if (!elementsQuery.data || elementsQuery.data.items.length === 0) return;
-    const subset = filterPredicate
-      ? elementsQuery.data.items.filter(filterPredicate)
-      : elementsQuery.data.items;
-    if (subset.length === 0) {
-      addToast({
-        type: 'info',
-        title: t('bim.quick_takeoff_empty_title', { defaultValue: 'Nothing to link' }),
-        message: t('bim.quick_takeoff_empty', {
-          defaultValue: 'Current filter has no elements to link',
-        }),
-      });
-      return;
-    }
-    setLinkCandidates(subset);
-  }, [elementsQuery.data, filterPredicate, addToast, t]);
 
   const handleUploadComplete = useCallback((modelId: string) => {
     setActiveModelId(modelId); setShowUploadOverride(false); setSelectedElementId(null); setMultiSelectedIds([]);
@@ -2461,11 +2390,9 @@ export function BIMPage() {
               onFilterChange={handleFilterChange}
               onClose={() => setFilterPanelOpen(false)}
               onElementClick={handleFilterElementClick}
-              onQuickTakeoff={handleQuickTakeoff}
               visibleElementCount={visibleElementCount}
               onSaveAsGroup={handleSaveAsGroup}
               savedGroups={savedGroups}
-              onLinkGroupToBOQ={handleLinkGroupToBOQ}
               onDeleteGroup={handleDeleteGroup}
               onSmartFilter={handleSmartFilter}
               isolatedIds={isolatedIds}
@@ -2479,8 +2406,6 @@ export function BIMPage() {
                 projectId={projectId}
                 onIsolateGroup={handleIsolateGroup}
                 onHighlightGroup={handleHighlightGroup}
-                onLinkToBOQ={handleLinkGroupToBOQ}
-                onNavigateToBOQ={handleNavigateToBOQ}
                 onDeleteGroup={handleDeleteGroup}
                 onGroupUpdated={handleGroupUpdated}
               />
@@ -2648,7 +2573,6 @@ export function BIMPage() {
             isolatedIds={isolatedIds}
             onIsolationChange={setIsolatedIds}
             onGeometryLoaded={setMeshMatchRatio}
-            onAddToBOQ={handleAddToBOQ}
             onUnlinkBOQ={handleUnlinkBOQ}
             onOpenDocument={handleOpenDocument}
             onOpenTask={handleOpenTask}
@@ -2743,17 +2667,8 @@ export function BIMPage() {
               onClose={() => setBoqPanelOpen(false)}
               onIsolateGroup={handleIsolateGroup}
               onHighlightGroup={handleHighlightGroup}
-              onLinkGroupToBOQ={handleLinkGroupToBOQ}
-              onNavigateToBOQ={handleNavigateToBOQ}
               onDeleteGroup={handleDeleteGroup}
               onGroupUpdated={handleGroupUpdated}
-              onHighlightBOQElements={(ids) => {
-                if (ids.length > 0) {
-                  setIsolatedIds(ids);
-                } else {
-                  setIsolatedIds(null);
-                }
-              }}
             />
           </div>
         )}
@@ -2768,21 +2683,6 @@ export function BIMPage() {
         onDeleteModel={handleDeleteModel}
         onUpload={() => setUploadOpen(true)}
       />
-
-      {/* BIM ↔ BOQ linking modal — opened from the properties panel
-          ("Add to BOQ" button) or the filter panel's quick-takeoff
-          action.  Renders a single-element or bulk-element linker. */}
-      {linkCandidates && linkCandidates.length > 0 && projectId && (
-        <AddToBOQModal
-          projectId={projectId}
-          modelId={activeModelId ?? ''}
-          elements={linkCandidates}
-          onClose={() => setLinkCandidates(null)}
-          onLinked={() => {
-            queryClient.invalidateQueries({ queryKey: ['bim-elements', activeModelId] });
-          }}
-        />
-      )}
 
       {/* Save-as-group modal — opened from the filter panel "Save as group"
           button.  Captures the current filter criteria + visible element ids

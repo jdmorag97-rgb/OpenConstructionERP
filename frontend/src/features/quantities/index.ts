@@ -1,1 +1,0 @@
-export { QuantitiesPage } from './QuantitiesPage';

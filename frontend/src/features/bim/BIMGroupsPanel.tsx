@@ -13,8 +13,6 @@ import {
   Bookmark,
   ChevronDown,
   ChevronRight,
-  ExternalLink,
-  Link2,
   MoreVertical,
   Pencil,
   Palette,
@@ -50,13 +48,6 @@ interface GroupQuantities {
   length: number;
 }
 
-interface GroupBOQLink {
-  positionId: string;
-  ordinal: string;
-  description: string;
-  total: number;
-}
-
 interface ContextMenuState {
   groupId: string;
   x: number;
@@ -73,10 +64,6 @@ export interface BIMGroupsPanelProps {
   onIsolateGroup: (group: BIMElementGroup) => void;
   /** Highlight the group's elements on hover (without isolating). */
   onHighlightGroup: (group: BIMElementGroup | null) => void;
-  /** Open AddToBOQModal pre-populated with the group's elements. */
-  onLinkToBOQ: (group: BIMElementGroup) => void;
-  /** Navigate to the BOQ editor at the given position. */
-  onNavigateToBOQ: (positionId: string) => void;
   /** Open the save-group modal to create a new group from selection. */
   onCreateGroup?: () => void;
   /** Delete a group. */
@@ -95,8 +82,6 @@ export default function BIMGroupsPanel({
   projectId: _projectId,
   onIsolateGroup,
   onHighlightGroup,
-  onLinkToBOQ,
-  onNavigateToBOQ,
   onCreateGroup,
   onDeleteGroup,
   onGroupUpdated,
@@ -145,33 +130,6 @@ export default function BIMGroupsPanel({
     return result;
   }, [savedGroups, elementMap]);
 
-  // Resolve BOQ links per group from member elements
-  const groupBOQLinks = useMemo(() => {
-    const result = new Map<string, GroupBOQLink[]>();
-    for (const group of savedGroups) {
-      const links: GroupBOQLink[] = [];
-      const seen = new Set<string>();
-      const memberIds = Array.isArray(group.member_element_ids) ? group.member_element_ids : [];
-      for (const elId of memberIds) {
-        const el = elementMap.get(elId);
-        if (el?.boq_links?.length) {
-          for (const link of el.boq_links) {
-            if (!seen.has(link.boq_position_id)) {
-              seen.add(link.boq_position_id);
-              links.push({
-                positionId: link.boq_position_id,
-                ordinal: link.boq_position_ordinal || '',
-                description: link.boq_position_description || '',
-                total: 0,
-              });
-            }
-          }
-        }
-      }
-      result.set(group.id, links);
-    }
-    return result;
-  }, [savedGroups, elementMap]);
 
   // Toggle expanded state for a group
   const toggleGroupExpanded = useCallback((groupId: string) => {
@@ -313,7 +271,6 @@ export default function BIMGroupsPanel({
           {savedGroups.map((group) => {
             const isExpanded = expandedGroupIds.has(group.id);
             const quantities = groupQuantities.get(group.id);
-            const boqLinks = groupBOQLinks.get(group.id) ?? [];
             const hasQuantities =
               quantities && (quantities.volume > 0 || quantities.area > 0 || quantities.length > 0);
             const isRenaming = renamingGroupId === group.id;
@@ -411,53 +368,6 @@ export default function BIMGroupsPanel({
                             {fmt(quantities.length)} m
                           </span>
                         )}
-                      </div>
-                    )}
-
-                    {/* BOQ links */}
-                    {boqLinks.length > 0 ? (
-                      <div className="space-y-0.5 px-1">
-                        {boqLinks.map((link) => (
-                          <div
-                            key={link.positionId}
-                            className="flex items-center gap-1 text-[10px]"
-                          >
-                            <Link2 size={9} className="text-oe-blue shrink-0" />
-                            <span className="text-content-secondary truncate">
-                              {t('bim.groups_boq_label', { defaultValue: 'BOQ' })}{' '}
-                              {link.ordinal || link.positionId.slice(0, 8)}
-                              {link.description ? ` - ${link.description}` : ''}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onNavigateToBOQ(link.positionId);
-                              }}
-                              className="shrink-0 ml-auto inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium text-oe-blue hover:bg-oe-blue/10 transition-colors"
-                            >
-                              {t('bim.groups_open', { defaultValue: 'Open' })}
-                              <ExternalLink size={8} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 px-1 text-[10px] text-content-quaternary">
-                        <span>
-                          {t('bim.groups_not_linked', { defaultValue: 'Not linked to BOQ' })}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onLinkToBOQ(group);
-                          }}
-                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium text-oe-blue hover:bg-oe-blue/10 transition-colors"
-                        >
-                          <Plus size={8} />
-                          {t('bim.groups_link_boq', { defaultValue: 'Link BOQ' })}
-                        </button>
                       </div>
                     )}
 
