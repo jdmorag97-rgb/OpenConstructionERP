@@ -18,7 +18,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listSessions } from '../cad-explorer/api';
 import { fetchBIMModels } from '../bim/api';
 import { fetchDrawings } from '../dwg-takeoff/api';
-import { takeoffApi } from '../takeoff/api';
 
 /* ── Types ───────────────────────────────────────────────────────────── */
 
@@ -111,8 +110,7 @@ function isCardClickable(doc: DocItem): boolean {
   const sourceModule = doc.metadata?.source_module;
   if (
     sourceModule === 'bim_hub' ||
-    sourceModule === 'dwg_takeoff' ||
-    sourceModule === 'takeoff'
+    sourceModule === 'dwg_takeoff'
   ) {
     return true;
   }
@@ -131,7 +129,7 @@ function isCardClickable(doc: DocItem): boolean {
  * BIM/DWG/Takeoff modules) over the filename extension. Falls back to
  * extension matching for legacy rows without source metadata.
  */
-function routeForDocument(doc: DocItem): { path: string; module: 'takeoff' | 'dwg-takeoff' | 'bim' | 'preview' | 'download' } {
+function routeForDocument(doc: DocItem): { path: string; module: 'dwg-takeoff' | 'bim' | 'preview' | 'download' } {
   const sourceModule = doc.metadata?.source_module;
   if (sourceModule === 'bim_hub') {
     return {
@@ -143,12 +141,6 @@ function routeForDocument(doc: DocItem): { path: string; module: 'takeoff' | 'dw
     return {
       path: `/dwg-takeoff?docId=${encodeURIComponent(doc.id)}&docName=${encodeURIComponent(doc.name)}`,
       module: 'dwg-takeoff',
-    };
-  }
-  if (sourceModule === 'takeoff') {
-    return {
-      path: `/takeoff?doc=${encodeURIComponent(doc.id)}&name=${encodeURIComponent(doc.name)}`,
-      module: 'takeoff',
     };
   }
 
@@ -515,13 +507,6 @@ export function DocumentsPage() {
     enabled: !!projectId,
     staleTime: 60_000,
   });
-  const { data: takeoffDocs = [] } = useQuery({
-    queryKey: ['takeoff-documents', projectId],
-    queryFn: () => takeoffApi.listDocuments(projectId ?? undefined),
-    enabled: !!projectId,
-    staleTime: 60_000,
-  });
-
   /* ── Sorted documents ───────────────────────────────────────────────── */
 
   /**
@@ -1107,12 +1092,12 @@ export function DocumentsPage() {
            PDFs uploaded via their native modules.  Clicking a card jumps
            to that module with the right deep-link so the user can pick
            up where they left off. */}
-      {(bimModels.length > 0 || dwgDrawings.length > 0 || takeoffDocs.length > 0) && (
+      {(bimModels.length > 0 || dwgDrawings.length > 0) && (
         <div className="space-y-3">
           <h3 className="text-xs font-semibold text-content-primary flex items-center gap-1.5">
             <File size={13} className="text-oe-blue" />
             {t('documents.module_files', { defaultValue: 'Module Files' })}
-            <Badge variant="blue" size="sm">{bimModels.length + dwgDrawings.length + takeoffDocs.length}</Badge>
+            <Badge variant="blue" size="sm">{bimModels.length + dwgDrawings.length}</Badge>
           </h3>
           <div className="grid gap-2 md:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {bimModels.map((m) => (
@@ -1152,27 +1137,6 @@ export function DocumentsPage() {
                     <p className="text-xs font-medium text-content-primary truncate">{d.name}</p>
                     <p className="text-[10px] text-content-tertiary">
                       DWG &middot; {d.entity_count ?? 0} ent
-                    </p>
-                  </div>
-                </div>
-              </button>
-            ))}
-            {takeoffDocs.map((td) => (
-              <button
-                key={`tk-${td.id}`}
-                type="button"
-                onClick={() => navigate(`/takeoff?tab=measurements&doc=${encodeURIComponent(td.id)}&name=${encodeURIComponent(td.filename)}`)}
-                className="group text-left rounded-lg border border-border-light bg-surface-primary px-3 py-2 hover:border-oe-blue/30 hover:shadow-sm transition-all"
-                title={td.filename}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded bg-red-50 dark:bg-red-950/30 shrink-0">
-                    <FileText size={13} className="text-red-500" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-content-primary truncate">{td.filename}</p>
-                    <p className="text-[10px] text-content-tertiary">
-                      PDF &middot; {td.pages ?? 0} pg
                     </p>
                   </div>
                 </div>
@@ -1335,16 +1299,6 @@ export function DocumentsPage() {
                               >
                                 <Eye size={14} className="text-content-tertiary" />
                                 {t('documents.preview', { defaultValue: 'Preview' })}
-                              </button>
-                            )}
-                            {previewKind === 'pdf' && (
-                              <button
-                                role="menuitem"
-                                onClick={() => { setOpenMenuId(null); navigate(`/takeoff?doc=${doc.id}&name=${encodeURIComponent(doc.name)}`); }}
-                                className="flex w-full items-center gap-2.5 px-3 py-2 text-xs text-content-primary hover:bg-surface-secondary transition-colors"
-                              >
-                                <Ruler size={14} className="text-oe-blue" />
-                                {t('documents.open_in_takeoff', { defaultValue: 'Measure & Takeoff' })}
                               </button>
                             )}
                             {(doc.name.toLowerCase().endsWith('.dwg') || doc.name.toLowerCase().endsWith('.dxf') || doc.name.toLowerCase().endsWith('.dgn')) && (

@@ -2,7 +2,7 @@
  * Pure-function tests for the unified markup aggregator.
  *
  * These tests cover the contract the Markups hub page depends on:
- *   1. normalisation from each of the three backend shapes
+ *   1. normalisation from each of the two backend shapes
  *   2. cross-source merge (newest-first + deterministic tie-break)
  *   3. filter chips (source / type / file / search) — AND semantics
  *   4. summary derivation (counts + file lookup for the dropdown)
@@ -15,14 +15,12 @@ import {
   applyFilters,
   fromDwgAnnotation,
   fromMarkupsHub,
-  fromPdfMeasurement,
   mergeUnified,
   summarise,
   type UnifiedMarkup,
 } from '../aggregator';
 import type { Markup } from '../api';
 import type { DwgAnnotation } from '@/features/dwg-takeoff/api';
-import type { MeasurementResponse } from '@/features/takeoff/api';
 
 /* ── Factories ───────────────────────────────────────────────────────── */
 
@@ -74,38 +72,6 @@ function makeDwgAnnotation(overrides: Partial<DwgAnnotation> = {}): DwgAnnotatio
   };
 }
 
-function makePdfMeasurement(
-  overrides: Partial<MeasurementResponse> = {},
-): MeasurementResponse {
-  return {
-    id: 'pdf-1',
-    project_id: 'p1',
-    document_id: 'site-plan.pdf',
-    page: 1,
-    type: 'distance',
-    group_name: 'Walls',
-    group_color: '#3b82f6',
-    annotation: 'Wall A',
-    points: [
-      { x: 0, y: 0 },
-      { x: 100, y: 0 },
-    ],
-    measurement_value: 5.5,
-    measurement_unit: 'm',
-    depth: null,
-    volume: null,
-    perimeter: null,
-    count_value: null,
-    scale_pixels_per_unit: null,
-    linked_boq_position_id: null,
-    metadata: {},
-    created_by: 'carol',
-    created_at: '2026-04-19T08:00:00Z',
-    updated_at: '2026-04-19T08:00:00Z',
-    ...overrides,
-  };
-}
-
 /* ── 1. Normalisation ────────────────────────────────────────────────── */
 
 describe('aggregator normalisation', () => {
@@ -134,25 +100,6 @@ describe('aggregator normalisation', () => {
     expect(u.sourceFileName).toBe('A-101.dxf');
     expect(u.type).toBe('text_pin');
     expect(u.deepLink).toBe('/dwg-takeoff?drawingId=draw-42&annotationId=dwg-1');
-  });
-
-  it('normalises a PDF takeoff measurement — label falls back to value+unit', () => {
-    const u = fromPdfMeasurement(
-      makePdfMeasurement({ annotation: null, measurement_value: 12.3, measurement_unit: 'm2' }),
-      { documentName: 'Plans.pdf' },
-    );
-    expect(u.source).toBe('pdf_takeoff');
-    expect(u.label).toBe('12.3 m2');
-    expect(u.sourceFileName).toBe('Plans.pdf');
-    expect(u.deepLink).toContain('/takeoff');
-    expect(u.deepLink).toContain('measurementId=pdf-1');
-  });
-
-  it('coerces unknown type values to "other"', () => {
-    const u = fromPdfMeasurement(
-      makePdfMeasurement({ type: 'alien_glyph' as MeasurementResponse['type'] }),
-    );
-    expect(u.type).toBe('other');
   });
 
   it('reads DWG annotation type from annotation_type when type is missing (backend field name)', () => {
@@ -196,15 +143,11 @@ describe('mergeUnified', () => {
         filename: 'Dwg.dxf',
       }),
     ]; // 04-21
-    const pdf = [
-      fromPdfMeasurement(makePdfMeasurement(), { documentName: 'Take.pdf' }),
-    ]; // 04-19
 
-    const merged = mergeUnified(hub, dwg, pdf);
+    const merged = mergeUnified(hub, dwg);
     expect(merged.map((m) => m.source)).toEqual([
       'dwg_takeoff',
       'markups_hub',
-      'pdf_takeoff',
     ]);
   });
 
@@ -235,10 +178,6 @@ describe('applyFilters', () => {
       name: 'Floor1.dxf',
       filename: 'Floor1.dxf',
     }),
-    fromPdfMeasurement(
-      makePdfMeasurement({ id: 'p1m', type: 'distance', annotation: 'Wall' }),
-      { documentName: 'Plans.pdf' },
-    ),
   ];
 
   it('filters by source', () => {
@@ -247,13 +186,10 @@ describe('applyFilters', () => {
     expect(out[0]!.source).toBe('dwg_takeoff');
   });
 
-  it('filters by type and source together (AND semantics)', () => {
-    const out = applyFilters(dataset, {
-      sources: new Set(['markups_hub', 'pdf_takeoff']),
-      types: new Set(['distance']),
-    });
+  it('filters by type', () => {
+    const out = applyFilters(dataset, { types: new Set(['cloud']) });
     expect(out).toHaveLength(1);
-    expect(out[0]!.nativeId).toBe('p1m');
+    expect(out[0]!.nativeId).toBe('h1');
   });
 
   it('filters by file id', () => {
@@ -265,7 +201,7 @@ describe('applyFilters', () => {
   it('search matches label, text and file name case-insensitively', () => {
     expect(applyFilters(dataset, { search: 'CLASH' })).toHaveLength(1);
     expect(applyFilters(dataset, { search: 'floor1' })).toHaveLength(1);
-    expect(applyFilters(dataset, { search: 'plans.pdf' })).toHaveLength(2);
+    expect(applyFilters(dataset, { search: 'plans.pdf' })).toHaveLength(1);
   });
 });
 
@@ -287,7 +223,6 @@ describe('summarise', () => {
     expect(s.total).toBe(3);
     expect(s.bySource.markups_hub).toBe(2);
     expect(s.bySource.dwg_takeoff).toBe(1);
-    expect(s.bySource.pdf_takeoff).toBe(0);
     expect(s.byType.cloud).toBe(2);
     expect(s.byType.arrow).toBe(1);
     expect(s.files).toHaveLength(2);

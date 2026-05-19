@@ -20,36 +20,16 @@ import type {
 
 /* ── Module manifest imports ───────────────────────────────────────── */
 
-import { manifest as assemblies } from './assemblies/manifest';
-import { manifest as validation } from './validation/manifest';
 import { manifest as schedule } from './schedule/manifest';
-import { manifest as fiveDCostModel } from './5d-cost-model/manifest';
-import { manifest as tendering } from './tendering/manifest';
 import { manifest as reports } from './reports/manifest';
-import { manifest as sustainability } from './sustainability/manifest';
-import { manifest as costBenchmark } from './cost-benchmark/manifest';
-import { manifest as pdfTakeoff } from './pdf-takeoff/manifest';
 import { manifest as collaboration } from './collaboration/manifest';
-import { manifest as riskAnalysis } from './risk-analysis/manifest';
-import { manifest as ddcIfcConverter } from './ddc-ifc-converter/manifest';
-import { manifest as ddcRvtConverter } from './ddc-rvt-converter/manifest';
 
 /* ── Registry ──────────────────────────────────────────────────────── */
 
 export const MODULE_REGISTRY: ModuleManifest[] = [
-  assemblies,
-  validation,
   schedule,
-  fiveDCostModel,
-  tendering,
   reports,
-  sustainability,
-  costBenchmark,
-  pdfTakeoff,
   collaboration,
-  riskAnalysis,
-  ddcIfcConverter,
-  ddcRvtConverter,
 ];
 
 /* ── Helper functions ──────────────────────────────────────────────── */

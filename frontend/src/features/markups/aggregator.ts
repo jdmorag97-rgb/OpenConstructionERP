@@ -1,11 +1,10 @@
 /**
  * Unified markup aggregator (read-only) — Option B.
  *
- * Joins the three heterogeneous annotation stores into a single feed:
+ * Joins the two heterogeneous annotation stores into a single feed:
  *
- *   1. Markups hub      — POST /v1/markups/        (per-project, optional document_id)
- *   2. DWG takeoff      — POST /v1/dwg_takeoff/annotations/   (per-drawing)
- *   3. PDF takeoff      — POST /v1/takeoff/measurements/      (per-project + document_id)
+ *   1. Markups hub  — POST /v1/markups/               (per-project, optional document_id)
+ *   2. DWG takeoff  — POST /v1/dwg_takeoff/annotations/   (per-drawing)
  *
  * Rationale for Option B (frontend aggregator) over Option A (extend Markups table):
  *
@@ -26,11 +25,10 @@
 
 import type { Markup, MarkupType } from './api';
 import type { DwgAnnotation, DwgDrawing } from '@/features/dwg-takeoff/api';
-import type { MeasurementResponse } from '@/features/takeoff/api';
 
 /* ── Source discriminators ───────────────────────────────────────────── */
 
-export type UnifiedMarkupSource = 'markups_hub' | 'pdf_takeoff' | 'dwg_takeoff';
+export type UnifiedMarkupSource = 'markups_hub' | 'dwg_takeoff';
 
 /** Canonical set of annotation types displayed in the hub.
  *  All three surfaces are normalised to this vocabulary. */
@@ -167,40 +165,6 @@ export function fromDwgAnnotation(
   };
 }
 
-export function fromPdfMeasurement(
-  m: MeasurementResponse,
-  opts: { documentName?: string | null } = {},
-): UnifiedMarkup {
-  const docName =
-    opts.documentName ?? (m.document_id ? m.document_id : 'PDF takeoff');
-  const label =
-    (m.annotation && m.annotation.trim()) ||
-    (m.type === 'count'
-      ? `${m.count_value ?? 0} ${m.measurement_unit}`
-      : m.measurement_value != null
-        ? `${m.measurement_value} ${m.measurement_unit}`
-        : m.type);
-  return {
-    id: `pdf:${m.id}`,
-    nativeId: m.id,
-    source: 'pdf_takeoff',
-    projectId: m.project_id,
-    sourceFileId: m.document_id,
-    sourceFileName: docName,
-    type: coerceType(m.type),
-    page: m.page ?? null,
-    label: truncate(label),
-    text: (m.metadata?.text as string) ?? null,
-    color: m.group_color || '#3b82f6',
-    status: 'active',
-    author: m.created_by || 'unknown',
-    createdAt: m.created_at,
-    deepLink: m.document_id
-      ? `/takeoff?tab=measurements&docId=${encodeURIComponent(m.document_id)}&measurementId=${m.id}`
-      : `/takeoff?tab=measurements&measurementId=${m.id}`,
-  };
-}
-
 /* ── Merge + filter + sort ──────────────────────────────────────────── */
 
 export interface UnifiedFilters {
@@ -258,7 +222,6 @@ export interface UnifiedSummary {
 export function summarise(items: ReadonlyArray<UnifiedMarkup>): UnifiedSummary {
   const bySource: Record<UnifiedMarkupSource, number> = {
     markups_hub: 0,
-    pdf_takeoff: 0,
     dwg_takeoff: 0,
   };
   const byType: Partial<Record<UnifiedMarkupType, number>> = {};

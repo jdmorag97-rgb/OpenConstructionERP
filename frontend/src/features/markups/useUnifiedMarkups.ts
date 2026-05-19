@@ -17,13 +17,11 @@ import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-quer
 import { apiGet } from '@/shared/lib/api';
 import { fetchMarkups } from './api';
 import { fetchDrawings, fetchAnnotations } from '@/features/dwg-takeoff/api';
-import { takeoffApi, type MeasurementResponse } from '@/features/takeoff/api';
 import type { DwgAnnotation, DwgDrawing } from '@/features/dwg-takeoff/api';
 
 import {
   fromDwgAnnotation,
   fromMarkupsHub,
-  fromPdfMeasurement,
   mergeUnified,
   summarise,
   type UnifiedMarkup,
@@ -108,15 +106,6 @@ export function useUnifiedMarkups(projectId: string | null | undefined): UseUnif
     staleTime: 30_000,
   });
 
-  // PDF takeoff measurements — already project-scoped. We only display the
-  // annotation-style types in the hub; the full list is filtered at render.
-  const pdfQuery = useQuery<MeasurementResponse[]>({
-    queryKey: [...UNIFIED_MARKUPS_QUERY_KEY, projectId, 'pdf-measurements'],
-    queryFn: () => takeoffApi.list(projectId as string),
-    enabled: !!projectId,
-    staleTime: 30_000,
-  });
-
   const { items, summary } = useMemo(() => {
     const docNameById = new Map<string, string>();
     for (const d of documentsQuery.data ?? []) docNameById.set(d.id, d.name);
@@ -138,18 +127,11 @@ export function useUnifiedMarkups(projectId: string | null | undefined): UseUnif
       })
       .filter((x): x is UnifiedMarkup => x !== null);
 
-    const pdf = (pdfQuery.data ?? []).map((m) =>
-      fromPdfMeasurement(m, {
-        documentName: m.document_id ? docNameById.get(m.document_id) ?? m.document_id : null,
-      }),
-    );
-
-    const merged = mergeUnified(hub, dwg, pdf);
+    const merged = mergeUnified(hub, dwg);
     return { items: merged, summary: summarise(merged) };
   }, [
     hubQuery.data,
     dwgAnnotationsQuery.data,
-    pdfQuery.data,
     drawingsQuery.data,
     documentsQuery.data,
   ]);
@@ -157,8 +139,7 @@ export function useUnifiedMarkups(projectId: string | null | undefined): UseUnif
   const isLoading =
     hubQuery.isLoading ||
     drawingsQuery.isLoading ||
-    dwgAnnotationsQuery.isLoading ||
-    pdfQuery.isLoading;
+    dwgAnnotationsQuery.isLoading;
 
   // Surface the first real error, but never block render — partial data is
   // better than an empty page when one source is offline.
@@ -166,7 +147,6 @@ export function useUnifiedMarkups(projectId: string | null | undefined): UseUnif
     (hubQuery.error as Error | undefined) ??
     (drawingsQuery.error as Error | undefined) ??
     (dwgAnnotationsQuery.error as Error | undefined) ??
-    (pdfQuery.error as Error | undefined) ??
     null;
 
   return { items, summary, isLoading, error };

@@ -39,9 +39,6 @@ const CostModelPage = lazy(() =>
 const SchedulePage = lazy(() =>
   import('@/features/schedule/SchedulePage').then((m) => ({ default: m.SchedulePage }))
 );
-const TakeoffPage = lazy(() =>
-  import('@/features/takeoff/TakeoffPage').then((m) => ({ default: m.TakeoffPage }))
-);
 const CadDataExplorerPage = lazy(() =>
   import('@/features/cad-explorer/CadDataExplorerPage').then((m) => ({ default: m.CadDataExplorerPage }))
 );
@@ -384,7 +381,6 @@ export default function App() {
         <Route path="/validation" element={<P title="Validation"><ValidationPage /></P>} />
 
         <Route path="/quantities" element={<P title="Quantity Takeoff"><QuantitiesPage /></P>} />
-        <Route path="/takeoff" element={<P title="PDF Takeoff"><TakeoffPage /></P>} />
         <Route path="/dwg-takeoff" element={<P title="DWG Takeoff"><DwgTakeoffPage /></P>} />
 
         <Route path="/schedule" element={<P title="4D Schedule"><SchedulePage /></P>} />

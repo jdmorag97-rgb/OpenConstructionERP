@@ -22,7 +22,6 @@ import {
   Hash,
   Pentagon,
   PenTool,
-  FileText,
   FileSpreadsheet,
   Layers,
   Filter,
@@ -49,7 +48,6 @@ const SOURCE_META: Record<
   { label: string; badge: 'blue' | 'success' | 'warning' | 'neutral'; icon: React.ElementType }
 > = {
   markups_hub: { label: 'Markups hub', badge: 'blue', icon: PenTool },
-  pdf_takeoff: { label: 'PDF takeoff', badge: 'warning', icon: FileText },
   dwg_takeoff: { label: 'DWG takeoff', badge: 'success', icon: FileSpreadsheet },
 };
 
@@ -199,7 +197,7 @@ export function UnifiedMarkupsList({ projectId }: UnifiedMarkupsListProps) {
     });
   };
 
-  const sourceChips: UnifiedMarkupSource[] = ['markups_hub', 'pdf_takeoff', 'dwg_takeoff'];
+  const sourceChips: UnifiedMarkupSource[] = ['markups_hub', 'dwg_takeoff'];
   const typesWithItems = (Object.keys(summary.byType) as UnifiedMarkupType[]).sort();
 
   return (
