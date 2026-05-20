@@ -15,7 +15,6 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useProjectContextStore } from '@/stores/useProjectContextStore';
 import { useUploadQueueStore } from '@/stores/useUploadQueueStore';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { listSessions } from '../cad-explorer/api';
 import { fetchBIMModels } from '../bim/api';
 import { fetchDrawings } from '../dwg-takeoff/api';
 
@@ -482,13 +481,6 @@ export function DocumentsPage() {
     }
   }, [deepLinkDocId, documents, searchParams, setSearchParams]);
 
-  /* ── CAD/BIM models (saved sessions) ─────────────────────────────────── */
-
-  // Show ALL CAD sessions (including ones without project_id)
-  const { data: cadSessions = [] } = useQuery({
-    queryKey: ['cad-saved-sessions'],
-    queryFn: () => listSessions(),
-  });
 
   /* ── Cross-module project files ──────────────────────────────────────
    * Documents module mirrors files uploaded via other modules so the
@@ -1029,63 +1021,6 @@ export function DocumentsPage() {
         </div>
         <SortDropdown value={sortBy} onChange={setSortBy} />
       </div>
-
-      {/* ── CAD/BIM Models ──────────────────────────────────────────────── */}
-      {cadSessions.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-semibold text-content-primary flex items-center gap-1.5">
-              <HardDrive size={13} className="text-oe-blue" />
-              {t('documents.cad_models', { defaultValue: 'CAD/BIM Models' })}
-              <Badge variant="blue" size="sm">{cadSessions.length}</Badge>
-            </h3>
-            <button onClick={() => navigate('/data-explorer')} className="text-2xs text-oe-blue hover:underline">
-              {t('documents.open_explorer', { defaultValue: 'Open Explorer' })}
-            </button>
-          </div>
-          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {cadSessions.map((s) => {
-              const fmt = (s.file_format || '').toUpperCase();
-              const fmtColor: Record<string, string> = {
-                RVT: 'bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400',
-                IFC: 'bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400',
-                DWG: 'bg-orange-50 text-orange-500 dark:bg-orange-950/30 dark:text-orange-400',
-                DGN: 'bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400',
-              };
-              return (
-                <button
-                  key={s.session_id}
-                  type="button"
-                  onClick={() => navigate(`/data-explorer?session=${s.session_id}`)}
-                  className="group text-left rounded-xl border border-border-light shadow-sm hover:shadow-md hover:border-oe-blue/30 transition-all bg-surface-primary p-4 flex flex-col"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-oe-blue-subtle shrink-0">
-                      <HardDrive size={16} className="text-oe-blue" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-content-primary truncate" title={s.display_name}>{s.display_name}</p>
-                      <p className="text-[11px] text-content-tertiary mt-1 flex items-center gap-1.5">
-                        <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-semibold ${fmtColor[fmt] || 'bg-surface-secondary text-content-tertiary'}`}>{fmt || '—'}</span>
-                        <span>{s.element_count.toLocaleString()} elements</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-2.5 border-t border-border-light/60 flex items-center justify-between text-[10px] text-content-quaternary">
-                    <span>{s.extraction_time.toFixed(1)}s</span>
-                    {s.created_at && <span><DateDisplay value={s.created_at} /></span>}
-                    {s.is_permanent ? (
-                      <Badge variant="success" size="sm">{t('documents.saved', { defaultValue: 'Saved' })}</Badge>
-                    ) : (
-                      <Badge variant="neutral" size="sm">{t('documents.temporary', { defaultValue: '24h' })}</Badge>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* ── Project files mirrored from other modules ───────────────────
            Compact section listing BIM models, DWG drawings, and takeoff

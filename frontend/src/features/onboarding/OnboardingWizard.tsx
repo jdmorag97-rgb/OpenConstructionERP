@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
 import i18n from 'i18next';
 import clsx from 'clsx';
 import {
@@ -9,9 +8,6 @@ import {
   ArrowLeft,
   Check,
   Sparkles,
-  Eye,
-  EyeOff,
-  ExternalLink,
   Loader2,
   CheckCircle2,
   Database,
@@ -33,7 +29,6 @@ import { useUploadQueueStore } from '@/stores/useUploadQueueStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useModuleStore } from '@/stores/useModuleStore';
 import { useViewModeStore } from '@/stores/useViewModeStore';
-import { aiApi, type AIProvider } from '@/features/ai/api';
 import { apiPost } from '@/shared/lib/api';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -99,38 +94,6 @@ const CWICR_DATABASES: CWICRDatabase[] = [
   { id: 'AR_DUBAI', name: 'Middle East / Gulf', city: 'Dubai', lang: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629', currency: 'AED', flagId: 'ae' },
   { id: 'ZH_SHANGHAI', name: 'China', city: 'Shanghai', lang: '\u4e2d\u6587', currency: 'CNY', flagId: 'cn' },
   { id: 'HI_MUMBAI', name: 'India / South Asia', city: 'Mumbai', lang: 'Hindi', currency: 'INR', flagId: 'in' },
-];
-
-// ── AI Provider definitions ─────────────────────────────────────────────────
-
-interface ProviderOption {
-  id: AIProvider;
-  name: string;
-  description: string;
-  docsUrl: string;
-  recommended?: boolean;
-}
-
-const AI_PROVIDERS: ProviderOption[] = [
-  {
-    id: 'anthropic',
-    name: 'Anthropic Claude',
-    description: 'Best for construction estimation',
-    docsUrl: 'https://console.anthropic.com/settings/keys',
-    recommended: true,
-  },
-  {
-    id: 'openai',
-    name: 'OpenAI GPT-4',
-    description: 'Widely supported',
-    docsUrl: 'https://platform.openai.com/api-keys',
-  },
-  {
-    id: 'gemini',
-    name: 'Google Gemini',
-    description: 'Multimodal capabilities',
-    docsUrl: 'https://aistudio.google.com/app/apikey',
-  },
 ];
 
 // ── Company Type Presets ────────────────────────────────────────────────────
@@ -302,11 +265,6 @@ const ALL_MODULES: ModuleDef[] = [
 const CORE_MODULE_KEYS = new Set(ALL_MODULES.filter((m) => m.core).map((m) => m.key));
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function maskApiKey(key: string): string {
-  if (key.length <= 8) return '\u2022'.repeat(key.length);
-  return key.slice(0, 8) + '\u2022'.repeat(Math.min(key.length - 8, 24));
-}
 
 /** Mark onboarding as completed in localStorage. */
 export function markOnboardingCompleted(): void {
@@ -1057,11 +1015,6 @@ function StepDataSetup({
   const [installingDemo, setInstallingDemo] = useState(false);
   const [demoInstalled, setDemoInstalled] = useState(false);
 
-  // ── AI state ──
-  const [selectedProvider, setSelectedProvider] = useState<AIProvider>('anthropic');
-  const [apiKey, setApiKey] = useState('');
-  const [showKey, setShowKey] = useState(false);
-
   // ── DB loading progress simulation ──
   useEffect(() => {
     if (!loadingDb) {
@@ -1197,54 +1150,6 @@ function StepDataSetup({
     }
   }, [suggestedDemoId, addToast, t]);
 
-  const testMutation = useMutation({
-    mutationFn: () => aiApi.testConnection(selectedProvider),
-    onSuccess: (result) => {
-      if (result.success) {
-        addToast({
-          type: 'success',
-          title: t('onboarding.ai_test_success', { defaultValue: 'Connection successful!' }),
-          message: result.latency_ms ? `${result.latency_ms}ms response time` : undefined,
-        });
-      } else {
-        addToast({
-          type: 'error',
-          title: t('onboarding.ai_test_failed', { defaultValue: 'Connection failed' }),
-          message: result.message,
-        });
-      }
-    },
-    onError: (err: Error) => {
-      addToast({
-        type: 'error',
-        title: t('onboarding.ai_test_error', { defaultValue: 'Test failed' }),
-        message: err.message,
-      });
-    },
-  });
-
-  const saveMutation = useMutation({
-    mutationFn: () => {
-      if (!apiKey.trim()) return Promise.resolve(null);
-      const keyField = `${selectedProvider}_api_key`;
-      return aiApi.updateSettings({
-        provider: selectedProvider,
-        [keyField]: apiKey.trim(),
-      } as Parameters<typeof aiApi.updateSettings>[0]);
-    },
-    onSuccess: () => {
-      if (apiKey.trim()) {
-        addToast({
-          type: 'success',
-          title: t('onboarding.ai_saved', { defaultValue: 'AI settings saved' }),
-        });
-      }
-    },
-    onError: (err: Error) => {
-      addToast({ type: 'error', title: t('onboarding.ai_save_failed', { defaultValue: 'Failed to save AI settings' }), message: err.message });
-    },
-  });
-
   const handleContinue = useCallback(async () => {
     // Start background DB loading if region selected but not loaded yet
     if (backgroundLoad && selectedRegion && !loadedDb && !loadingDb) {
@@ -1262,10 +1167,6 @@ function StepDataSetup({
     if (installDemo && !demoInstalled && !installingDemo) {
       handleInstallDemo(); // also fire and forget in background
     }
-    // Save AI key if provided
-    if (apiKey.trim()) {
-      saveMutation.mutate();
-    }
     onNext();
   }, [
     backgroundLoad,
@@ -1277,13 +1178,8 @@ function StepDataSetup({
     demoInstalled,
     installingDemo,
     handleInstallDemo,
-    apiKey,
-    saveMutation,
     onNext,
   ]);
-
-  // Show all regions
-  const [aiExpanded, setAiExpanded] = useState(false);
 
   return (
     <div className="flex flex-col items-center">
@@ -1409,119 +1305,6 @@ function StepDataSetup({
             </div>
           </div>
         </div>
-
-        {/* Card 3: AI Provider — collapsible */}
-        <div className="rounded-2xl bg-surface-elevated shadow-sm shadow-black/[0.04]">
-          <button
-            type="button"
-            onClick={() => setAiExpanded(!aiExpanded)}
-            className="w-full flex items-center justify-between p-6"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-oe-blue-subtle text-oe-blue">
-                <Sparkles size={20} />
-              </div>
-              <div className="text-left">
-                <h3 className="text-base font-bold text-content-primary">
-                  {t('onboarding.connect_ai', { defaultValue: 'Connect AI Provider' })}
-                </h3>
-                <p className="text-xs text-content-tertiary">
-                  {t('onboarding.ai_optional', { defaultValue: 'Optional — smart estimation features' })}
-                </p>
-              </div>
-            </div>
-            <ArrowRight
-              size={16}
-              className={clsx(
-                'text-content-tertiary transition-transform duration-200 shrink-0',
-                aiExpanded && 'rotate-90',
-              )}
-            />
-          </button>
-
-          {aiExpanded && (
-            <div className="px-6 pb-6 pt-0 space-y-3">
-              {/* Provider selector */}
-              <select
-                value={selectedProvider}
-                onChange={(e) => {
-                  setSelectedProvider(e.target.value as AIProvider);
-                  setApiKey('');
-                  setShowKey(false);
-                }}
-                className="h-9 w-full rounded-lg border border-border bg-surface-primary px-3 text-sm text-content-primary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue transition-all"
-              >
-                {AI_PROVIDERS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                    {p.recommended ? ' *' : ''}
-                  </option>
-                ))}
-              </select>
-
-              {/* API key input */}
-              <div className="relative">
-                <input
-                  type="text"
-                  value={showKey ? apiKey : apiKey ? maskApiKey(apiKey) : ''}
-                  onChange={(e) => {
-                    if (showKey) {
-                      setApiKey(e.target.value);
-                    } else {
-                      setApiKey(e.target.value);
-                      setShowKey(true);
-                    }
-                  }}
-                  onFocus={() => {
-                    if (apiKey && !showKey) setShowKey(true);
-                  }}
-                  placeholder={t('onboarding.api_key_placeholder', {
-                    defaultValue: 'Paste API key...',
-                  })}
-                  className="h-9 w-full rounded-lg border border-border bg-surface-primary px-3 pr-8 font-mono text-xs text-content-primary placeholder:text-content-tertiary focus:outline-none focus:ring-2 focus:ring-oe-blue/30 focus:border-oe-blue transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute inset-y-0 right-0 flex items-center px-2 text-content-tertiary hover:text-content-primary transition-colors"
-                  tabIndex={-1}
-                >
-                  {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-
-              {/* Test and docs link */}
-              <div className="flex items-center justify-between">
-                <a
-                  href={AI_PROVIDERS.find((p) => p.id === selectedProvider)?.docsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-2xs text-oe-blue hover:underline"
-                >
-                  {t('onboarding.get_api_key', { defaultValue: 'Get key' })}
-                  <ExternalLink size={10} />
-                </a>
-                {apiKey.trim() && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => testMutation.mutate()}
-                    disabled={testMutation.isPending}
-                    icon={
-                      testMutation.isPending ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : undefined
-                    }
-                  >
-                    {testMutation.isPending
-                      ? t('onboarding.testing', { defaultValue: 'Testing...' })
-                      : t('onboarding.test', { defaultValue: 'Test' })}
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
       <p className="mt-4 text-xs text-content-tertiary text-center max-w-md">
@@ -1540,7 +1323,7 @@ function StepDataSetup({
         <Button
           variant="primary"
           onClick={handleContinue}
-          loading={saveMutation.isPending || installingDemo}
+          loading={installingDemo}
           icon={<ArrowRight size={16} />}
           iconPosition="right"
         >

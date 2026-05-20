@@ -45,7 +45,6 @@ import {
   Download,
   CheckSquare,
   CalendarDays,
-  ClipboardCheck,
   ListChecks,
   Ruler,
   FileDown,
@@ -114,7 +113,6 @@ import { EntityNameFilter, entityDisplayName } from './components/EntityNameFilt
 import CreateTaskFromDwgModal from './CreateTaskFromDwgModal';
 import LinkDocumentToDwgModal from './LinkDocumentToDwgModal';
 import LinkActivityToDwgModal from './LinkActivityToDwgModal';
-import LinkRequirementToDwgModal from './LinkRequirementToDwgModal';
 /* ── GridBackground ──────────────────────────────────────────────────── */
 
 /**
@@ -600,11 +598,6 @@ export function DwgTakeoffPage() {
     entityLabel?: string;
   } | null>(null);
   const [linkActivityFor, setLinkActivityFor] = useState<{
-    entityIds: string[];
-    drawingId: string;
-    entityLabel?: string;
-  } | null>(null);
-  const [linkRequirementFor, setLinkRequirementFor] = useState<{
     entityIds: string[];
     drawingId: string;
     entityLabel?: string;
@@ -2213,21 +2206,6 @@ export function DwgTakeoffPage() {
                         : undefined,
                     });
                   }}
-                  onLinkRequirement={() => {
-                    setContextMenu(null);
-                    if (!selectedDrawingId) return;
-                    const ids = selectedEntityIds.size > 0
-                      ? Array.from(selectedEntityIds)
-                      : [contextMenu.entityId];
-                    const primary = entities.find((e) => e.id === ids[0]);
-                    setLinkRequirementFor({
-                      entityIds: ids,
-                      drawingId: selectedDrawingId,
-                      entityLabel: primary
-                        ? `${primary.type} · ${primary.layer}`
-                        : undefined,
-                    });
-                  }}
                   onClose={() => setContextMenu(null)}
                 />
               )}
@@ -2635,23 +2613,6 @@ export function DwgTakeoffPage() {
                               {t('dwg_takeoff.attach_activity', { defaultValue: '+ Link activity' })}
                             </span>
                           </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setLinkRequirementFor({
-                                entityIds: [selectedEntity.id],
-                                drawingId: selectedDrawingId,
-                                entityLabel: `${selectedEntity.type} · ${selectedEntity.layer}`,
-                              })
-                            }
-                            className="w-full flex items-center gap-2 rounded-md border border-border bg-surface-secondary px-2 py-1.5 text-left text-[11px] text-content-primary hover:bg-surface-tertiary transition-colors"
-                            data-testid="dwg-attach-requirement"
-                          >
-                            <ClipboardCheck size={12} className="text-violet-500 shrink-0" />
-                            <span className="flex-1">
-                              {t('dwg_takeoff.attach_requirement', { defaultValue: '+ Link requirement' })}
-                            </span>
-                          </button>
                         </div>
                       )}
 
@@ -3027,15 +2988,6 @@ export function DwgTakeoffPage() {
           drawingId={linkActivityFor.drawingId}
           entityLabel={linkActivityFor.entityLabel}
           onClose={() => setLinkActivityFor(null)}
-        />
-      )}
-      {linkRequirementFor && projectId && (
-        <LinkRequirementToDwgModal
-          projectId={projectId}
-          entityIds={linkRequirementFor.entityIds}
-          drawingId={linkRequirementFor.drawingId}
-          entityLabel={linkRequirementFor.entityLabel}
-          onClose={() => setLinkRequirementFor(null)}
         />
       )}
     </div>
@@ -3870,7 +3822,6 @@ function DwgContextMenu({
   onCreateTask,
   onLinkSchedule,
   onLinkDocument,
-  onLinkRequirement,
   onClose,
 }: {
   screenX: number;
@@ -3882,7 +3833,6 @@ function DwgContextMenu({
   onCreateTask: () => void;
   onLinkSchedule: () => void;
   onLinkDocument: () => void;
-  onLinkRequirement: () => void;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -3925,9 +3875,6 @@ function DwgContextMenu({
       } />
       <MenuItem onClick={onLinkDocument} icon={<FileText size={12} />} label={
         t('dwg_takeoff.link_document', { defaultValue: 'Link to document' })
-      } />
-      <MenuItem onClick={onLinkRequirement} icon={<ClipboardCheck size={12} />} label={
-        t('dwg_takeoff.link_requirement', { defaultValue: 'Link to requirement' })
       } />
     </div>
   );

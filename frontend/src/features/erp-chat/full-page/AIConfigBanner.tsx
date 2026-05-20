@@ -1,51 +1,13 @@
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { aiApi, type AISettings } from '@/features/ai/api';
 
 /**
- * Banner shown above the chat panel when the user has not configured an
- * AI provider. Without an API key the chat returns a 500-style error and
- * the page feels broken — this banner explains exactly what to do.
+ * Banner shown above the chat panel when the AI microservice is not
+ * yet connected. Stub for v1.1 — always shown until estruflow-ai-parser
+ * integration is wired up.
  */
 export default function AIConfigBanner() {
   const { t } = useTranslation();
-  const [settings, setSettings] = useState<AISettings | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    aiApi
-      .getSettings()
-      .then((data) => {
-        if (!cancelled) setSettings(data);
-      })
-      .catch(() => {
-        // Ignore — we'll show a generic banner if settings call fails
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (loading) return null;
-
-  // Determine if any provider has a key set
-  const hasKey =
-    !!settings &&
-    (settings.anthropic_api_key_set ||
-      settings.openai_api_key_set ||
-      settings.gemini_api_key_set ||
-      settings.openrouter_api_key_set ||
-      settings.mistral_api_key_set ||
-      settings.groq_api_key_set ||
-      settings.deepseek_api_key_set ||
-      settings.cohere_api_key_set);
-
-  if (hasKey) return null;
 
   return (
     <div

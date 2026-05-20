@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useProjectContextStore } from '@/stores/useProjectContextStore';
-import { aiApi, type AISettings } from '@/features/ai/api';
 import type { ChatMessage, ChatStreamChunk, DataPanelEntry, ToolCallInfo } from '../types';
 
 const DEFAULT_SUGGESTIONS = [
@@ -42,30 +41,9 @@ export function useChatFullPage(): UseChatFullPageReturn {
 
   const activeProjectId = useProjectContextStore((s) => s.activeProjectId);
 
-  // Check if any AI provider is configured
+  // AI microservice not yet wired up — treat as unconfigured until v1.1
   useEffect(() => {
-    let cancelled = false;
-    aiApi
-      .getSettings()
-      .then((settings: AISettings) => {
-        if (cancelled) return;
-        const hasKey =
-          settings.anthropic_api_key_set ||
-          settings.openai_api_key_set ||
-          settings.gemini_api_key_set ||
-          settings.openrouter_api_key_set ||
-          settings.mistral_api_key_set ||
-          settings.groq_api_key_set ||
-          settings.deepseek_api_key_set ||
-          settings.cohere_api_key_set;
-        setAiConfigured(hasKey);
-      })
-      .catch(() => {
-        if (!cancelled) setAiConfigured(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    setAiConfigured(false);
   }, []);
 
   const sendMessage = useCallback(

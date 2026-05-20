@@ -69,7 +69,6 @@ import SaveGroupModal from './SaveGroupModal';
 import CreateTaskFromBIMModal from './CreateTaskFromBIMModal';
 import LinkDocumentToBIMModal from './LinkDocumentToBIMModal';
 import LinkActivityToBIMModal from './LinkActivityToBIMModal';
-import LinkRequirementToBIMModal from './LinkRequirementToBIMModal';
 import type { BIMGroupFilterCriteria } from './api';
 import { Filter } from 'lucide-react';
 import { useProjectContextStore } from '@/stores/useProjectContextStore';
@@ -1472,9 +1471,6 @@ export function BIMPage() {
   const [createTaskFor, setCreateTaskFor] = useState<BIMElementData[] | null>(null);
   const [linkDocumentFor, setLinkDocumentFor] = useState<BIMElementData[] | null>(null);
   const [linkActivityFor, setLinkActivityFor] = useState<BIMElementData[] | null>(null);
-  const [linkRequirementFor, setLinkRequirementFor] = useState<
-    BIMElementData[] | null
-  >(null);
   const addToast = useToastStore((s) => s.addToast);
 
   /* ── Cross-highlight bridge to BOQ editor ───────────────────────── */
@@ -1922,9 +1918,6 @@ export function BIMPage() {
   }, []);
   const handleLinkActivity = useCallback((element: BIMElementData) => {
     setLinkActivityFor([element]);
-  }, []);
-  const handleLinkRequirement = useCallback((element: BIMElementData) => {
-    setLinkRequirementFor([element]);
   }, []);
   const handleOpenRequirement = useCallback(
     (_requirementId: string) => {
@@ -2581,7 +2574,6 @@ export function BIMPage() {
             onCreateTask={handleCreateTask}
             onLinkDocument={handleLinkDocument}
             onLinkActivity={handleLinkActivity}
-            onLinkRequirement={handleLinkRequirement}
             onSmartFilter={handleSmartFilter}
             leftPanelOpen={filterPanelOpen && elements.length > 0}
             className="h-full"
@@ -2724,13 +2716,6 @@ export function BIMPage() {
           projectId={projectId}
           elements={linkActivityFor}
           onClose={() => setLinkActivityFor(null)}
-        />
-      )}
-      {linkRequirementFor && projectId && (
-        <LinkRequirementToBIMModal
-          projectId={projectId}
-          elements={linkRequirementFor}
-          onClose={() => setLinkRequirementFor(null)}
         />
       )}
       <ConfirmDialog {...confirmProps} />

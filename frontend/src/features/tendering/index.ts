@@ -1,1 +1,0 @@
-export { TenderingPage } from './TenderingPage';

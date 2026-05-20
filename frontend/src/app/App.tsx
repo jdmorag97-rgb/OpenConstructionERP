@@ -5,14 +5,12 @@ import { DashboardPage } from '@/features/dashboard';
 import { LoginPage, RegisterPage, ForgotPasswordPage } from '@/features/auth';
 import { ProjectsPage, CreateProjectPage, ProjectDetailPage } from '@/features/projects';
 import { OnboardingWizard } from '@/features/onboarding';
-import { ValidationPage } from '@/features/validation';
 import { ModulesPage, ModuleDeveloperGuide } from '@/features/modules';
 import { useModuleRouteElements } from '@/modules/ModuleRoutes';
 import { SettingsPage } from '@/features/settings';
 import { DatabaseSetupPage } from '@/features/setup';
 import { IntegrationsPage } from '@/features/integrations';
 import { AboutPage } from '@/features/about/AboutPage';
-import { QuickEstimatePage } from '@/features/ai';
 import { Logo, ShortcutsDialog, CommandPalette, ToastContainer, ErrorBoundary, NotFoundPage } from '@/shared/ui';
 import GlobalSearchModal from '@/features/search/GlobalSearchModal';
 import { useGlobalSearchStore } from '@/stores/useGlobalSearchStore';
@@ -29,23 +27,8 @@ import { initErrorLogger } from '@/shared/lib/errorLogger';
 const SchedulePage = lazy(() =>
   import('@/features/schedule/SchedulePage').then((m) => ({ default: m.SchedulePage }))
 );
-const CadDataExplorerPage = lazy(() =>
-  import('@/features/cad-explorer/CadDataExplorerPage').then((m) => ({ default: m.CadDataExplorerPage }))
-);
-const TenderingPage = lazy(() =>
-  import('@/features/tendering/TenderingPage').then((m) => ({ default: m.TenderingPage }))
-);
-const AdvisorPage = lazy(() =>
-  import('@/features/ai/AdvisorPage').then((m) => ({ default: m.AdvisorPage }))
-);
-const ERPChatPage = lazy(() =>
-  import('@/features/erp-chat/full-page/ChatFullPage')
-);
 const ChangeOrdersPage = lazy(() =>
   import('@/features/changeorders/ChangeOrdersPage').then((m) => ({ default: m.ChangeOrdersPage }))
-);
-const AnalyticsPage = lazy(() =>
-  import('@/features/analytics/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage }))
 );
 const RiskRegisterPage = lazy(() =>
   import('@/features/risk/RiskRegisterPage').then((m) => ({ default: m.RiskRegisterPage }))
@@ -118,12 +101,6 @@ const BIMPage = lazy(() =>
 );
 const UserManagementPage = lazy(() =>
   import('@/features/users/UserManagementPage').then((m) => ({ default: m.UserManagementPage }))
-);
-const ArchitectureMapPage = lazy(() =>
-  import('@/features/architecture/ArchitectureMapPage').then((m) => ({ default: m.ArchitectureMapPage }))
-);
-const ProjectIntelligencePage = lazy(() =>
-  import('@/features/project-intelligence/ProjectIntelligencePage').then((m) => ({ default: m.ProjectIntelligencePage }))
 );
 
 function LoadingScreen() {
@@ -325,11 +302,6 @@ export default function App() {
         {/* App — all protected, all real pages */}
         <Route path="/" element={<P title="Dashboard"><DashboardPage /></P>} />
 
-        <Route path="/ai-estimate" element={<P title="AI Quick Estimate"><QuickEstimatePage /></P>} />
-        <Route path="/advisor" element={<P title="AI Cost Advisor"><AdvisorPage /></P>} />
-        <Route path="/chat" element={<P title="AI Chat"><ERPChatPage /></P>} />
-        <Route path="/cad-takeoff" element={<Navigate to="/data-explorer" replace />} />
-        <Route path="/data-explorer" element={<P title="Data Explorer"><CadDataExplorerPage /></P>} />
         <Route path="/bim" element={<P title="BIM Viewer"><BIMPage /></P>} />
         <Route path="/assets" element={<P title="Asset Register"><AssetsPage /></P>} />
         <Route path="/bim/:modelId" element={<P title="BIM Viewer"><BIMPage /></P>} />
@@ -340,17 +312,14 @@ export default function App() {
         <Route path="/projects/new" element={<P title="New Project"><CreateProjectPage /></P>} />
         <Route path="/projects/:projectId" element={<P title="Project"><ProjectDetailPage /></P>} />
 
-        <Route path="/validation" element={<P title="Validation"><ValidationPage /></P>} />
 
         <Route path="/dwg-takeoff" element={<P title="DWG Takeoff"><DwgTakeoffPage /></P>} />
 
         <Route path="/schedule" element={<P title="4D Schedule"><SchedulePage /></P>} />
 
-        <Route path="/analytics" element={<P title="Analytics"><AnalyticsPage /></P>} />
 
         <Route path="/reporting" element={<P title="Reporting Dashboards"><ReportingPage /></P>} />
 
-        <Route path="/tendering" element={<P title="Tendering"><TenderingPage /></P>} />
 
         <Route path="/changeorders" element={<P title="Change Orders"><ChangeOrdersPage /></P>} />
         <Route path="/documents" element={<P title="Documents"><DocumentsPage /></P>} />
@@ -402,8 +371,6 @@ export default function App() {
         <Route path="/settings" element={<P title="Settings"><SettingsPage /></P>} />
         <Route path="/integrations" element={<P title="Integrations"><IntegrationsPage /></P>} />
         <Route path="/about" element={<P title="About"><AboutPage /></P>} />
-        <Route path="/project-intelligence" element={<P title="Project Intelligence"><ProjectIntelligencePage /></P>} />
-        <Route path="/architecture" element={<P title="Architecture Map"><ArchitectureMapPage /></P>} />
 
         {/* Convenience route aliases — redirect to canonical paths */}
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
