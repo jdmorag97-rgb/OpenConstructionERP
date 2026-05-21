@@ -20,7 +20,6 @@ import { useThemeStore } from '@/stores/useThemeStore';
 import { ddcVerifyIntegrity, ddcInjectMeta, DDC_ORIGIN } from '@/shared/lib/ddc-integrity';
 import { useKeyboardShortcuts } from '@/shared/hooks/useKeyboardShortcuts';
 import { useTranslation } from 'react-i18next';
-import { getLanguageByCode } from './i18n';
 import { initErrorLogger } from '@/shared/lib/errorLogger';
 
 // Lazy-loaded heavy pages — code-split into separate chunks
@@ -248,29 +247,15 @@ if (typeof window !== 'undefined' && typeof console !== 'undefined') {
   } catch { /* noop */ }
 }
 
-/** Keeps <html dir="..."> and lang attribute in sync with the active i18n language. */
+/** Keeps <html lang> in sync with the active i18n language. All supported
+ *  languages (es, en, pt, fr) are LTR — dir is fixed to 'ltr'. */
 function useDocumentDirection() {
   const { i18n } = useTranslation();
 
-  // Set dir immediately on mount (not just on language change)
   useEffect(() => {
-    const lang = getLanguageByCode(i18n.language);
-    const dir = (lang && 'dir' in lang && lang.dir === 'rtl') ? 'rtl' : 'ltr';
-    document.documentElement.dir = dir;
+    document.documentElement.dir = 'ltr';
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
-
-  // Also listen for runtime language changes
-  useEffect(() => {
-    const handler = (lng: string) => {
-      const lang = getLanguageByCode(lng);
-      const dir = (lang && 'dir' in lang && lang.dir === 'rtl') ? 'rtl' : 'ltr';
-      document.documentElement.dir = dir;
-      document.documentElement.lang = lng;
-    };
-    i18n.on('languageChanged', handler);
-    return () => { i18n.off('languageChanged', handler); };
-  }, [i18n]);
 }
 
 export default function App() {
